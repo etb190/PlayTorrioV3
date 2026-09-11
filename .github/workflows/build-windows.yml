@@ -42,7 +42,7 @@ jobs:
             touch .env
           fi
           if ! grep -q "DISCORD_APP_ID" .env; then
-            echo "DISCORD_APP_ID=1430114242815725579" >> .env
+            echo "DISCORD_APP_ID=926541425682829352" >> .env
           fi
 
       - name: Install dependencies

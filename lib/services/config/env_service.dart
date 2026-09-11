@@ -103,6 +103,6 @@ class EnvService {
     if (compileVal.isNotEmpty) return compileVal;
     final envVal = get('DISCORD_APP_ID');
     if (envVal.isNotEmpty) return envVal;
-    return '1430114242815725579';
+    return '926541425682829352';
   }
 }

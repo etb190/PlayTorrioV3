@@ -23,7 +23,11 @@ class DiscordRpcService {
   DiscordRpcService._internal();
 
   static const String _prefKey = 'discord_rpc_enabled';
-  static const String _defaultAssetKey = 'logo';
+  static const String _defaultIconUrl =
+      'https://cdn.discordapp.com/app-icons/926541425682829352/5f0df1d2e4b78a1c8fa5eba23fda5992.png';
+
+  DiscordAsset get _netflixAsset =>
+      DiscordAsset.fromUrl(_defaultIconUrl, text: 'Netflix');
 
   final ValueNotifier<bool> isEnabled = ValueNotifier<bool>(true);
 
@@ -146,13 +150,13 @@ class DiscordRpcService {
   // Status Helpers
   // ---------------------------------------------------------------------------
 
-  /// Set Idle / Browsing status: "browsing PlayTorrioV3"
+  /// Set Idle / Browsing status: "Browsing"
   Future<void> setIdle() async {
     _currentKind = DiscordActivityKind.idle;
     final presence = DiscordPresence(
       type: DiscordActivityType.playing,
-      details: 'Browsing PlayTorrioV3',
-      largeAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+      details: 'Browsing',
+      largeAsset: _netflixAsset,
       timestamps: DiscordTimestamps.started(_sessionStartTime),
     );
     await _updatePresence(presence);
@@ -182,16 +186,22 @@ class DiscordRpcService {
 
     final hasValidPoster = posterUrl != null && posterUrl.trim().isNotEmpty && posterUrl.startsWith('http');
 
+    String? stateText;
+    if (year != null && year.trim().isNotEmpty) {
+      stateText = '(${year.trim()})';
+    }
+    if (isPaused) {
+      stateText = (stateText != null && stateText.isNotEmpty) ? '$stateText (Paused)' : 'Paused';
+    }
+
     final presence = DiscordPresence(
       type: DiscordActivityType.watching,
       details: 'Watching $cleanTitle',
-      state: isPaused
-          ? 'Paused'
-          : (year != null && year.trim().isNotEmpty ? '($year)' : 'In PlayTorrioV3'),
+      state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: timestamps,
     );
 
@@ -212,13 +222,11 @@ class DiscordRpcService {
     _currentKind = DiscordActivityKind.series;
     final cleanTitle = title.trim();
 
-    String stateText;
     final s = season ?? 1;
     final e = episode ?? 1;
+    String stateText = 'S$s E$e';
     if (episodeTitle != null && episodeTitle.trim().isNotEmpty) {
-      stateText = 'S${s}E$e: ${episodeTitle.trim()}';
-    } else {
-      stateText = 'Season $s Episode $e';
+      stateText = '$stateText • ${episodeTitle.trim()}';
     }
     if (isPaused) stateText = '$stateText (Paused)';
 
@@ -240,8 +248,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: timestamps,
     );
 
@@ -262,20 +270,17 @@ class DiscordRpcService {
     _currentKind = DiscordActivityKind.anime;
     final cleanTitle = title.trim();
 
-    String stateText;
+    String? stateText;
     if (episode != null) {
-      if (season != null && season > 1) {
-        stateText = 'Season $season Episode $episode';
-      } else {
-        stateText = 'Episode $episode';
-      }
+      final s = season ?? 1;
+      stateText = s > 1 ? 'S$s E$episode' : 'Episode $episode';
       if (episodeTitle != null && episodeTitle.trim().isNotEmpty) {
-        stateText = '$stateText - ${episodeTitle.trim()}';
+        stateText = '$stateText • ${episodeTitle.trim()}';
       }
-    } else {
-      stateText = 'Anime in PlayTorrioV3';
     }
-    if (isPaused) stateText = '$stateText (Paused)';
+    if (isPaused) {
+      stateText = (stateText != null && stateText.isNotEmpty) ? '$stateText (Paused)' : 'Paused';
+    }
 
     DiscordTimestamps? timestamps;
     if (!isPaused) {
@@ -295,8 +300,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: timestamps,
     );
 
@@ -321,8 +326,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidLogo
           ? DiscordAsset.fromUrl(logoUrl.trim(), text: stateText)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: DiscordTimestamps.started(DateTime.now()),
     );
 
@@ -348,7 +353,7 @@ class DiscordRpcService {
     } else if (chapter != null && chapter.trim().isNotEmpty) {
       stateText = chapter.trim();
     } else {
-      stateText = 'Audiobook in PlayTorrioV3';
+      stateText = 'Audiobook';
     }
     if (isPaused) stateText = '$stateText (Paused)';
 
@@ -370,8 +375,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidCover
           ? DiscordAsset.fromUrl(coverUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: timestamps,
     );
 
@@ -398,7 +403,7 @@ class DiscordRpcService {
     } else if (author != null && author.trim().isNotEmpty) {
       stateText = 'by ${author.trim()}';
     } else {
-      stateText = 'eBook in PlayTorrioV3';
+      stateText = 'eBook';
     }
 
     final hasValidCover = coverUrl != null && coverUrl.trim().isNotEmpty && coverUrl.startsWith('http');
@@ -409,8 +414,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidCover
           ? DiscordAsset.fromUrl(coverUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
     );
 
     await _updatePresence(presence);
@@ -427,7 +432,7 @@ class DiscordRpcService {
 
     final stateText = (chapter != null && chapter.trim().isNotEmpty)
         ? (chapter.trim().toLowerCase().startsWith('chapter') ? chapter.trim() : 'Chapter ${chapter.trim()}')
-        : 'Manga in PlayTorrioV3';
+        : 'Manga';
 
     final hasValidCover = coverUrl != null && coverUrl.trim().isNotEmpty && coverUrl.startsWith('http');
 
@@ -437,8 +442,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidCover
           ? DiscordAsset.fromUrl(coverUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
     );
 
     await _updatePresence(presence);
@@ -458,7 +463,7 @@ class DiscordRpcService {
     final cleanTitle = title.trim();
     final cleanArtist = artist.trim();
 
-    String stateText = cleanArtist.isNotEmpty ? 'by $cleanArtist' : 'Music in PlayTorrioV3';
+    String stateText = cleanArtist.isNotEmpty ? 'by $cleanArtist' : 'Music';
     if (!isPlaying) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
@@ -479,8 +484,8 @@ class DiscordRpcService {
       state: stateText,
       largeAsset: hasValidCover
           ? DiscordAsset.fromUrl(coverUrl.trim(), text: cleanTitle)
-          : const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
-      smallAsset: const DiscordAsset.fromKey(_defaultAssetKey, text: 'PlayTorrioV3'),
+          : _netflixAsset,
+      smallAsset: _netflixAsset,
       timestamps: timestamps,
     );
 
