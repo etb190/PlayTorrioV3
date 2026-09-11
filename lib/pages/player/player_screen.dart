@@ -156,6 +156,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentSource = widget.source;
     _currentEpisode = widget.episode;
     _currentTitle = widget.title;
+    if (widget.initialPosition != null) {
+      _position = widget.initialPosition!;
+    }
 
     WakelockPlus.enable();
     _logoAnimController = AnimationController(
@@ -402,6 +405,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
       _player.play();
       _startHideControlsTimer();
+      _updateDiscordRpc();
 
       // Defer background services until after playback starts
       Future.microtask(() {
@@ -913,6 +917,13 @@ class _PlayerScreenState extends State<PlayerScreen>
     _startHideControlsTimer();
   }
 
+  void _seekTo(Duration pos) {
+    _player.seek(pos);
+    _position = pos;
+    _positionNotifier.value = pos;
+    _updateDiscordRpc();
+  }
+
   void _seekRelative(Duration offset) {
     final cur = _player.state.position;
     final dur = _player.state.duration;
@@ -920,7 +931,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final clamped = target < Duration.zero
         ? Duration.zero
         : (dur > Duration.zero && target > dur ? dur : target);
-    _player.seek(clamped);
+    _seekTo(clamped);
     _startHideControlsTimer();
   }
 
@@ -1066,7 +1077,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         ? Duration(milliseconds: seg.endMs!)
         : _player.state.duration;
 
-    _player.seek(target + const Duration(milliseconds: 300));
+    _seekTo(target + const Duration(milliseconds: 300));
 
     setState(() {
       _showSkipButton = false;
@@ -1583,7 +1594,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           onPlayPause: () {
                             _togglePlayPause();
                           },
-                          onSeek: (pos) => _player.seek(pos),
+                          onSeek: (pos) => _seekTo(pos),
                           onSeekBack10: () {
                             _seekRelative(const Duration(seconds: -10));
                           },

@@ -175,13 +175,8 @@ class DiscordRpcService {
     final cleanTitle = title.trim();
 
     DiscordTimestamps? timestamps;
-    if (!isPaused) {
-      if (duration != null && duration > Duration.zero && position != null) {
-        final remaining = duration - position;
-        timestamps = DiscordTimestamps.ending(DateTime.now().add(remaining));
-      } else if (position != null) {
-        timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
-      }
+    if (!isPaused && position != null) {
+      timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
     final hasValidPoster = posterUrl != null && posterUrl.trim().isNotEmpty && posterUrl.startsWith('http');
@@ -196,7 +191,7 @@ class DiscordRpcService {
 
     final presence = DiscordPresence(
       type: DiscordActivityType.watching,
-      details: 'Watching $cleanTitle',
+      details: cleanTitle,
       state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
@@ -231,20 +226,15 @@ class DiscordRpcService {
     if (isPaused) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (!isPaused) {
-      if (duration != null && duration > Duration.zero && position != null) {
-        final remaining = duration - position;
-        timestamps = DiscordTimestamps.ending(DateTime.now().add(remaining));
-      } else if (position != null) {
-        timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
-      }
+    if (!isPaused && position != null) {
+      timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
     final hasValidPoster = posterUrl != null && posterUrl.trim().isNotEmpty && posterUrl.startsWith('http');
 
     final presence = DiscordPresence(
       type: DiscordActivityType.watching,
-      details: 'Watching $cleanTitle',
+      details: cleanTitle,
       state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
@@ -283,20 +273,15 @@ class DiscordRpcService {
     }
 
     DiscordTimestamps? timestamps;
-    if (!isPaused) {
-      if (duration != null && duration > Duration.zero && position != null) {
-        final remaining = duration - position;
-        timestamps = DiscordTimestamps.ending(DateTime.now().add(remaining));
-      } else if (position != null) {
-        timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
-      }
+    if (!isPaused && position != null) {
+      timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
     final hasValidPoster = posterUrl != null && posterUrl.trim().isNotEmpty && posterUrl.startsWith('http');
 
     final presence = DiscordPresence(
       type: DiscordActivityType.watching,
-      details: 'Watching $cleanTitle',
+      details: cleanTitle,
       state: stateText,
       largeAsset: hasValidPoster
           ? DiscordAsset.fromUrl(posterUrl.trim(), text: cleanTitle)
@@ -358,13 +343,8 @@ class DiscordRpcService {
     if (isPaused) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (!isPaused) {
-      if (duration != null && duration > Duration.zero && position != null) {
-        final remaining = duration - position;
-        timestamps = DiscordTimestamps.ending(DateTime.now().add(remaining));
-      } else if (position != null) {
-        timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
-      }
+    if (!isPaused && position != null) {
+      timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
     final hasValidCover = coverUrl != null && coverUrl.trim().isNotEmpty && coverUrl.startsWith('http');
@@ -467,13 +447,8 @@ class DiscordRpcService {
     if (!isPlaying) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (isPlaying) {
-      if (duration != null && duration > Duration.zero && position != null) {
-        final remaining = duration - position;
-        timestamps = DiscordTimestamps.ending(DateTime.now().add(remaining));
-      } else if (position != null) {
-        timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
-      }
+    if (isPlaying && position != null) {
+      timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
     final hasValidCover = coverUrl != null && coverUrl.trim().isNotEmpty && coverUrl.startsWith('http');
