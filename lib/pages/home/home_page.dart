@@ -375,7 +375,7 @@ class _HomePageState extends State<HomePage> {
                       return MovieSliderSection(
                         section: _sections[sectionIdx],
                         showCalendarButton: calEnabled && isLastTwo,
-                        injectSupportCard: sectionIdx == 0,
+                        injectSupportCard: false,
                       );
                     },
                   );
@@ -440,13 +440,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
 
-      // ── Custom Scroll Track ──
-      if (MediaQuery.sizeOf(context).width > 800) // Desktop only
-        Positioned(
-          right: 24,
-          bottom: 40,
-          child: _CustomScrollTrack(controller: _scrollController),
-        ),
+
 
       // ── Liquid Dock Navbar ──
       Positioned(
@@ -786,7 +780,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
     super.dispose();
   }
 
-  bool get _showSupportSlide => HomePageSettings.enableSupportDev.value;
+  bool get _showSupportSlide => false;
   int get _supportSlideIndex => widget.movies.isNotEmpty ? 1 : 0;
   int get _totalSlideCount => widget.movies.length + (_showSupportSlide ? 1 : 0);
 

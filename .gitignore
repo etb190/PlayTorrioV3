@@ -54,3 +54,4 @@ app.*.map.json
 .env
 **/secrets.dart
 .gemini/
+release/
