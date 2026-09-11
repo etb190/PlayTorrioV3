@@ -41,6 +41,9 @@ jobs:
           else
             touch .env
           fi
+          if ! grep -q "DISCORD_APP_ID" .env; then
+            echo "DISCORD_APP_ID=1430114242815725579" >> .env
+          fi
 
       - name: Install dependencies
         run: flutter pub get
