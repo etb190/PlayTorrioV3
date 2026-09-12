@@ -1,11 +1,14 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/movie/movie.dart';
 import '../../models/movie/video.dart';
 import '../../models/movie/movie_detail.dart';
 import '../../models/my_list/my_list_item.dart';
+import '../../services/continue_watching/continue_watching_service.dart';
 import '../../services/metadata/bestsimilar_scraper.dart';
 import '../../services/metadata/metadata_service.dart';
 import '../../services/my_list/my_list_service.dart';
@@ -68,6 +71,12 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
   int? _selectedSeason;
   int? _previousSeason;
   List<Video> _currentSeasonEpisodes = [];
+
+  final GlobalKey _episodesSectionKey = GlobalKey();
+  final ScrollController _mainScrollController = ScrollController();
+  int? _lastWatchedSeason;
+  int? _lastWatchedEpisode;
+  String? _lastWatchedEpisodeId;
 
   bool _isSynopsisExpanded = false;
 
@@ -152,6 +161,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
   @override
   void dispose() {
     _animController.dispose();
+    _mainScrollController.dispose();
     for (final c in _episodeControllers.values) {
       c.dispose();
     }
@@ -164,7 +174,28 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
 
   Future<void> _handlePlayAction(Video? ep) async {
     if (_detail == null) return;
-    
+
+    if (ep != null) {
+      _lastWatchedSeason = ep.season ?? _selectedSeason;
+      _lastWatchedEpisode = ep.episode;
+      _lastWatchedEpisodeId = ep.id;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (_lastWatchedSeason != null) {
+          await prefs.setInt('last_watched_season_${widget.movie.id}', _lastWatchedSeason!);
+        }
+        if (_lastWatchedEpisode != null) {
+          await prefs.setInt('last_watched_episode_${widget.movie.id}', _lastWatchedEpisode!);
+        }
+        if (_lastWatchedEpisodeId != null) {
+          await prefs.setString('last_watched_episode_id_${widget.movie.id}', _lastWatchedEpisodeId!);
+        }
+      } catch (e) {
+        debugPrint('[DetailsPage] error saving last watched episode: $e');
+      }
+      if (mounted) setState(() {});
+    }
+
     Navigator.push(
       context,
       CinematicSlideRoute(
@@ -176,6 +207,63 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
         ),
       ),
     );
+  }
+
+  void _scrollToEpisodes() {
+    if (_episodesSectionKey.currentContext != null) {
+      Scrollable.ensureVisible(
+        _episodesSectionKey.currentContext!,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+      );
+    }
+  }
+
+  Widget _buildEpisodesButton({required bool fullWidth}) {
+    return _HoverButton(
+      onTap: _scrollToEpisodes,
+      child: Container(
+        width: fullWidth ? double.infinity : null,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.14),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.video_library_rounded, color: Colors.white, size: 22),
+            SizedBox(width: 6),
+            Text(
+              'Episodes',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _scrollSeasonIntoView() {
+    if (_selectedSeason == null || _detail == null) return;
+    final seasons = _detail!.videos.map((v) => v.season).where((s) => s != null).toSet().toList()..sort();
+    final idx = seasons.indexOf(_selectedSeason);
+    if (idx > 0 && _seasonScrollController.hasClients) {
+      final target = (idx * 115.0).clamp(0.0, _seasonScrollController.position.maxScrollExtent);
+      _seasonScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   void _updateEpisodeScrollButtons() {
@@ -300,16 +388,44 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
     }
 
     if (mounted) {
+      int? savedSeason;
+      int? savedEpisode;
+      String? savedEpisodeId;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        savedSeason = prefs.getInt('last_watched_season_${widget.movie.id}');
+        savedEpisode = prefs.getInt('last_watched_episode_${widget.movie.id}');
+        savedEpisodeId = prefs.getString('last_watched_episode_id_${widget.movie.id}');
+
+        if (savedSeason == null) {
+          final cw = ContinueWatchingService.activeItems.firstWhereOrNull((item) => item.id == widget.movie.id);
+          if (cw != null) {
+            savedSeason = cw.season;
+            savedEpisode = cw.episode;
+            savedEpisodeId = cw.episodeId;
+          }
+        }
+      } catch (e) {
+        debugPrint('[DetailsPage] error loading last watched episode: $e');
+      }
+
       setState(() {
         _detail = meta;
         _isLoading = false;
+        _lastWatchedSeason = savedSeason;
+        _lastWatchedEpisode = savedEpisode;
+        _lastWatchedEpisodeId = savedEpisodeId;
 
         if (meta != null && (_isSeries || meta.videos.isNotEmpty) && meta.videos.isNotEmpty) {
           final seasons = meta.videos.map((v) => v.season).where((s) => s != null).toSet().toList();
           seasons.sort();
           if (seasons.isNotEmpty) {
-            _selectedSeason = seasons.first;
-            _updateEpisodesForSeason();
+            if (savedSeason != null && seasons.contains(savedSeason)) {
+              _selectedSeason = savedSeason;
+            } else {
+              _selectedSeason = seasons.first;
+            }
+            _updateEpisodesForSeason(targetEpisodeNum: savedEpisode, targetEpisodeId: savedEpisodeId);
           } else {
             _currentSeasonEpisodes = List.from(meta.videos);
           }
@@ -322,6 +438,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
           _updateSeasonScrollButtons();
           _updateCastScrollButtons();
           _updateRelatedScrollButtons();
+          _scrollSeasonIntoView();
         }
       });
 
@@ -387,7 +504,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
     }
   }
 
-  void _updateEpisodesForSeason() {
+  void _updateEpisodesForSeason({int? targetEpisodeNum, String? targetEpisodeId}) {
     if (_detail == null || _selectedSeason == null) return;
     setState(() {
       _currentSeasonEpisodes = _detail!.videos.where((v) => v.season == _selectedSeason).toList();
@@ -395,7 +512,30 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_episodeScrollController.hasClients) _episodeScrollController.jumpTo(0);
+      if (_episodeScrollController.hasClients) {
+        int targetIdx = -1;
+        final checkNum = targetEpisodeNum ?? _lastWatchedEpisode;
+        final checkId = targetEpisodeId ?? _lastWatchedEpisodeId;
+        if (checkId != null || checkNum != null) {
+          targetIdx = _currentSeasonEpisodes.indexWhere((ep) =>
+              (checkId != null && ep.id == checkId) ||
+              (checkNum != null && ep.episode == checkNum));
+        }
+
+        if (targetIdx > 0) {
+          final isDesktop = _isDesktop();
+          final cardWidth = isDesktop ? 300.0 : 230.0;
+          final targetOffset = ((targetIdx * (cardWidth + _Space.md)) - (isDesktop ? 100.0 : 30.0))
+              .clamp(0.0, _episodeScrollController.position.maxScrollExtent);
+          _episodeScrollController.animateTo(
+            targetOffset,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+          );
+        } else {
+          _episodeScrollController.jumpTo(0);
+        }
+      }
       _updateEpisodeScrollButtons();
     });
   }
@@ -456,6 +596,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
         if (bgUrl != null) _buildBackdrop(bgUrl, screenSize),
         Positioned.fill(
           child: SingleChildScrollView(
+            controller: _mainScrollController,
             physics: const BouncingScrollPhysics(),
             child: Center(
               child: ConstrainedBox(
@@ -482,12 +623,20 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
                             const SizedBox(height: _Space.xl),
                           ],
                           if (meta.videos.isNotEmpty) ...[
-                            if (meta.videos.map((v) => v.season).where((s) => s != null).toSet().length > 1) ...[
-                              _buildSeasonSelector(meta),
-                              const SizedBox(height: _Space.lg),
-                            ] else ...[
-                              _buildSectionHeader(_isCollection ? 'Movies in Collection' : 'Episodes'),
-                            ],
+                            KeyedSubtree(
+                              key: _episodesSectionKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (meta.videos.map((v) => v.season).where((s) => s != null).toSet().length > 1) ...[
+                                    _buildSeasonSelector(meta),
+                                    const SizedBox(height: _Space.lg),
+                                  ] else ...[
+                                    _buildSectionHeader(_isCollection ? 'Movies in Collection' : 'Episodes'),
+                                  ],
+                                ],
+                              ),
+                            ),
                             AnimatedSwitcher(
                               duration: const Duration(milliseconds: 550),
                               switchInCurve: Curves.easeOutCubic,
@@ -702,6 +851,10 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
                 ),
               const SizedBox(height: _Space.lg),
               _buildPlayButton(fullWidth: true),
+              if (_isSeries && (_detail?.videos.isNotEmpty == true)) ...[
+                const SizedBox(height: _Space.sm),
+                _buildEpisodesButton(fullWidth: true),
+              ],
               const SizedBox(height: _Space.sm),
               _buildLibraryButton(fullWidth: true),
             ],
@@ -761,6 +914,10 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
         Row(
           children: [
             Expanded(child: _buildPlayButton(fullWidth: true)),
+            if (_isSeries && (_detail?.videos.isNotEmpty == true)) ...[
+              const SizedBox(width: _Space.sm),
+              _buildEpisodesButton(fullWidth: false),
+            ],
             const SizedBox(width: _Space.sm),
             _buildLibraryButton(fullWidth: false),
           ],
@@ -907,12 +1064,34 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
   }
 
   Widget _buildPlayButton({required bool fullWidth}) {
+    Video? targetEp;
+    if (_lastWatchedEpisodeId != null || _lastWatchedEpisode != null) {
+      targetEp = _currentSeasonEpisodes.firstWhereOrNull(
+        (v) => (v.id == _lastWatchedEpisodeId) || (v.episode == _lastWatchedEpisode),
+      ) ?? (_detail?.videos.isNotEmpty == true ? _detail!.videos.firstWhereOrNull(
+        (v) => (v.id == _lastWatchedEpisodeId) || (v.episode == _lastWatchedEpisode),
+      ) : null);
+    }
+    targetEp ??= _currentSeasonEpisodes.isNotEmpty
+        ? _currentSeasonEpisodes.first
+        : (_detail?.videos.isNotEmpty == true ? _detail!.videos.first : null);
+
+    final String playLabel;
+    if (_isCollection) {
+      playLabel = 'Play First Movie';
+    } else if (_isSeries) {
+      if (_lastWatchedEpisode != null) {
+        final s = _lastWatchedSeason ?? _selectedSeason ?? 1;
+        playLabel = 'Resume S$s E$_lastWatchedEpisode';
+      } else {
+        playLabel = 'Play Episodes';
+      }
+    } else {
+      playLabel = 'Play Movie';
+    }
+
     return _HoverButton(
-      onTap: () => _handlePlayAction(
-        _currentSeasonEpisodes.isNotEmpty
-            ? _currentSeasonEpisodes.first
-            : (_detail?.videos.isNotEmpty == true ? _detail!.videos.first : null),
-      ),
+      onTap: () => _handlePlayAction(targetEp),
       child: Container(
         width: fullWidth ? double.infinity : null,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -928,9 +1107,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
             const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
             const SizedBox(width: 6),
             Text(
-              _isCollection
-                  ? 'Play First Movie'
-                  : (_isSeries ? 'Play Episodes' : 'Play Movie'),
+              playLabel,
               style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ],
@@ -1048,11 +1225,14 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
             ),
             if (isOverflowing) ...[
               const SizedBox(height: _Space.xs),
-              GestureDetector(
-                onTap: () => setState(() => _isSynopsisExpanded = !_isSynopsisExpanded),
-                child: Text(
-                  _isSynopsisExpanded ? 'Show less' : 'Read more',
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => setState(() => _isSynopsisExpanded = !_isSynopsisExpanded),
+                  child: Text(
+                    _isSynopsisExpanded ? 'Show less' : 'Read more',
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
@@ -1282,6 +1462,8 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
                 separatorBuilder: (_, __) => const SizedBox(width: _Space.md),
                 itemBuilder: (context, index) {
                   final ep = _currentSeasonEpisodes[index];
+                  final isCurrent = (_lastWatchedEpisodeId != null && ep.id == _lastWatchedEpisodeId) ||
+                      (_lastWatchedEpisode != null && ep.episode == _lastWatchedEpisode);
                   return SizedBox(
                     width: cardWidth,
                     child: _EpisodeCard(
@@ -1289,6 +1471,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
                       fallbackImageUrl: _detail?.background ?? _detail?.poster ?? widget.movie.poster,
                       onTap: () => _handlePlayAction(ep),
                       isCollection: _isCollection,
+                      isCurrent: isCurrent,
                     ),
                   );
                 },
@@ -1765,12 +1948,14 @@ class _EpisodeCard extends StatefulWidget {
   final String? fallbackImageUrl;
   final VoidCallback? onTap;
   final bool isCollection;
+  final bool isCurrent;
 
   const _EpisodeCard({
     required this.episode,
     this.fallbackImageUrl,
     this.onTap,
     this.isCollection = false,
+    this.isCurrent = false,
   });
 
   @override
@@ -1799,10 +1984,21 @@ class _EpisodeCardState extends State<_EpisodeCard> {
             decoration: BoxDecoration(
               color: _Palette.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _hovered ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.04)),
-              boxShadow: _hovered
-                  ? [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 18, offset: const Offset(0, 8))]
-                  : [],
+              border: Border.all(
+                color: widget.isCurrent
+                    ? _Palette.accent
+                    : (_hovered ? Colors.white.withOpacity(0.22) : Colors.white.withOpacity(0.04)),
+                width: widget.isCurrent ? 1.8 : 1.0,
+              ),
+              boxShadow: widget.isCurrent
+                  ? [
+                      BoxShadow(color: _Palette.accent.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 4)),
+                      if (_hovered)
+                        BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 18, offset: const Offset(0, 8)),
+                    ]
+                  : (_hovered
+                      ? [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 18, offset: const Offset(0, 8))]
+                      : []),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -1832,6 +2028,34 @@ class _EpisodeCardState extends State<_EpisodeCard> {
                             ),
                           ),
                         ),
+                        if (widget.isCurrent)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _Palette.accent,
+                                borderRadius: BorderRadius.circular(4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'ACTIVE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                          ),
                         Center(
                           child: AnimatedOpacity(
                             opacity: _hovered ? 1.0 : 0.0,

@@ -314,15 +314,18 @@ class _MyListPageState extends State<MyListPage> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    IconButton(
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        Icons.refresh_rounded,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 14,
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: IconButton(
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          size: 14,
+                        ),
+                        onPressed: isSyncing ? null : () => MyListService.syncAll(),
                       ),
-                      onPressed: isSyncing ? null : () => MyListService.syncAll(),
                     ),
                   ],
                 ),
@@ -353,25 +356,28 @@ class _MyListPageState extends State<MyListPage> {
                 const SizedBox(width: 16),
 
                 // Sort Dropdown
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _sortBy,
-                      dropdownColor: const Color(0xFF151822),
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                      icon: const Icon(Icons.sort_rounded, color: Color(0xFF7C5CFF), size: 16),
-                      items: const [
-                        DropdownMenuItem(value: 'recent', child: Text('Recently Added')),
-                        DropdownMenuItem(value: 'title', child: Text('Alphabetical')),
-                        DropdownMenuItem(value: 'year', child: Text('Release Year')),
-                      ],
-                      onChanged: (v) => setState(() => _sortBy = v!),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _sortBy,
+                        dropdownColor: const Color(0xFF151822),
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                        icon: const Icon(Icons.sort_rounded, color: Color(0xFF7C5CFF), size: 16),
+                        items: const [
+                          DropdownMenuItem(value: 'recent', child: Text('Recently Added')),
+                          DropdownMenuItem(value: 'title', child: Text('Alphabetical')),
+                          DropdownMenuItem(value: 'year', child: Text('Release Year')),
+                        ],
+                        onChanged: (v) => setState(() => _sortBy = v!),
+                      ),
                     ),
                   ),
                 ),
@@ -418,11 +424,13 @@ class _MyListPageState extends State<MyListPage> {
   Widget _buildFilterPill(String type, String label, int count) {
     final isSelected = _filterType == type;
 
-    return GestureDetector(
-      onTap: () => setState(() => _filterType = type),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => setState(() => _filterType = type),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF7C5CFF) : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
@@ -468,6 +476,7 @@ class _MyListPageState extends State<MyListPage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -556,6 +565,7 @@ class _MyListCardState extends State<_MyListCard> {
     final isMovie = item.type == 'movie';
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
@@ -732,16 +742,19 @@ class _MyListCardState extends State<_MyListCard> {
                               const SizedBox(width: 12),
 
                               // Quick Delete Button
-                              GestureDetector(
-                                onTap: widget.onRemove,
-                                child: Container(
-                                  width: 38,
-                                  height: 38,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: const Color(0xFFE50914).withValues(alpha: 0.9),
+                              MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: widget.onRemove,
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFFE50914).withValues(alpha: 0.9),
+                                    ),
+                                    child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
                                   ),
-                                  child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
                                 ),
                               ),
                             ],

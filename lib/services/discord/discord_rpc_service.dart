@@ -175,7 +175,9 @@ class DiscordRpcService {
     final cleanTitle = title.trim();
 
     DiscordTimestamps? timestamps;
-    if (!isPaused && position != null) {
+    if (isPaused) {
+      timestamps = const DiscordTimestamps(end: 1);
+    } else if (position != null) {
       timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
@@ -226,7 +228,9 @@ class DiscordRpcService {
     if (isPaused) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (!isPaused && position != null) {
+    if (isPaused) {
+      timestamps = const DiscordTimestamps(end: 1);
+    } else if (position != null) {
       timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
@@ -273,7 +277,9 @@ class DiscordRpcService {
     }
 
     DiscordTimestamps? timestamps;
-    if (!isPaused && position != null) {
+    if (isPaused) {
+      timestamps = const DiscordTimestamps(end: 1);
+    } else if (position != null) {
       timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
@@ -343,7 +349,9 @@ class DiscordRpcService {
     if (isPaused) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (!isPaused && position != null) {
+    if (isPaused) {
+      timestamps = const DiscordTimestamps(end: 1);
+    } else if (position != null) {
       timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 
@@ -447,7 +455,9 @@ class DiscordRpcService {
     if (!isPlaying) stateText = '$stateText (Paused)';
 
     DiscordTimestamps? timestamps;
-    if (isPlaying && position != null) {
+    if (!isPlaying) {
+      timestamps = const DiscordTimestamps(end: 1);
+    } else if (position != null) {
       timestamps = DiscordTimestamps.started(DateTime.now().subtract(position));
     }
 

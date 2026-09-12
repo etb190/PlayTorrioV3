@@ -45,6 +45,8 @@ import '../../widgets/player/text_sync_overlay.dart';
 import '../../models/download/download_task_model.dart';
 import '../../services/download/download_service.dart';
 import '../../utils/download/download_path_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/metadata/metadata_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final StreamSource source;
@@ -148,6 +150,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   final Map<String, List<StreamSource>> _cachedSourcesByEpisode = {};
   String? _activeStreamUrl;
   bool _wasFullscreenBeforeEntering = false;
+  MovieDetail? _detail;
 
   @override
   void initState() {
@@ -156,8 +159,13 @@ class _PlayerScreenState extends State<PlayerScreen>
     _currentSource = widget.source;
     _currentEpisode = widget.episode;
     _currentTitle = widget.title;
+    _detail = widget.detail;
     if (widget.initialPosition != null) {
       _position = widget.initialPosition!;
+    }
+    _saveLastWatchedEpisodeToStorage();
+    if ((_detail?.videos.isEmpty ?? true) && _detail != null && _detail!.id.isNotEmpty) {
+      _fetchFullDetail();
     }
 
     WakelockPlus.enable();
@@ -976,6 +984,42 @@ class _PlayerScreenState extends State<PlayerScreen>
     _switchStream(newSource, episode);
   }
 
+  Future<void> _saveLastWatchedEpisodeToStorage() async {
+    final mediaId = widget.detail?.id ?? _detail?.id;
+    final ep = _currentEpisode;
+    if (mediaId != null && mediaId.isNotEmpty && ep != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (ep.season != null) {
+          await prefs.setInt('last_watched_season_$mediaId', ep.season!);
+        }
+        if (ep.episode != null) {
+          await prefs.setInt('last_watched_episode_$mediaId', ep.episode!);
+        }
+        await prefs.setString('last_watched_episode_id_$mediaId', ep.id);
+      } catch (e) {
+        debugPrint('[PlayerScreen] Error saving last watched episode: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchFullDetail() async {
+    try {
+      final meta = await MetadataService.fetchMeta(
+        baseUrl: 'https://v3-cinemeta.strem.io',
+        type: (_detail?.type.isNotEmpty == true) ? _detail!.type : 'series',
+        imdbId: _detail!.id,
+      );
+      if (meta != null && meta.videos.isNotEmpty && mounted) {
+        setState(() {
+          _detail = meta;
+        });
+      }
+    } catch (e) {
+      debugPrint('[PlayerScreen] Failed to load full series detail: $e');
+    }
+  }
+
   void _switchStream(StreamSource newSource, Video newEpisode) async {
     _progressSaveTimer?.cancel();
     _savePlaybackProgress();
@@ -986,6 +1030,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     setState(() {
       _currentSource = newSource;
       _currentEpisode = newEpisode;
+      _saveLastWatchedEpisodeToStorage();
       final showName = widget.detail?.name ?? widget.title;
       final epNum = newEpisode.episode ?? 1;
       final sNum = newEpisode.season ?? 1;
@@ -1525,13 +1570,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                         t.status == DownloadStatus.downloading);
 
                     return PlayerTopBar(
-                      title: widget.detail?.name ?? _currentTitle,
+                      title: _detail?.name ?? widget.detail?.name ?? _currentTitle,
                       subtitle: episodeSubtitle,
                       quality: _currentSource.name,
                       onDownload: (_isLoading || isOfflineFile) ? null : _handleDownloadMedia,
                       isDownloading: isDownloading,
                       onCopyStreamUrl: _isLoading ? null : _handleCopyStreamUrl,
-                      onToggleEpisodes: (!_isLoading && widget.detail?.videos.isNotEmpty == true)
+                      onToggleEpisodes: (!_isLoading && ((_detail?.videos.isNotEmpty == true) || (widget.detail?.videos.isNotEmpty == true)))
                           ? _toggleEpisodesPanel
                           : null,
                       isEpisodesActive: _showEpisodesPanel || _showSourcesPanel,
@@ -1588,7 +1633,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           isAudioActive: _selectedAudioTrackIndex > 0,
                           isEpisodesActive: _showEpisodesPanel || _showSourcesPanel,
                           isFullscreen: isFs,
-                          onToggleEpisodes: (widget.detail?.videos.isNotEmpty == true)
+                          onToggleEpisodes: ((_detail?.videos.isNotEmpty == true) || (widget.detail?.videos.isNotEmpty == true))
                               ? _toggleEpisodesPanel
                               : null,
                           onPlayPause: () {
@@ -1826,7 +1871,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             ),
 
           // In-Player Episodes Side Panel
-          if (_showEpisodesPanel && widget.detail?.videos.isNotEmpty == true && !_isLoading)
+          if (_showEpisodesPanel && ((_detail?.videos.isNotEmpty == true) || (widget.detail?.videos.isNotEmpty == true)) && !_isLoading)
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -1836,7 +1881,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   child: GestureDetector(
                     onTap: () {},
                     child: PlayerEpisodesPanel(
-                      videos: widget.detail!.videos,
+                      videos: (_detail?.videos.isNotEmpty == true ? _detail!.videos : widget.detail!.videos),
                       currentEpisode: _currentEpisode,
                       onEpisodeSelected: _onEpisodeChosen,
                       onClose: () => setState(() => _showEpisodesPanel = false),

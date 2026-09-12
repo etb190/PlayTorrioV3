@@ -2,33 +2,27 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../models/continue_watching/continue_watching_item.dart';
 import '../../models/movie/movie.dart';
-import '../../models/anime/anime_media.dart';
+import '../../models/my_list/my_list_item.dart';
 import '../../pages/details/details_page.dart';
-import '../../pages/anime/anime_details_page.dart';
-import '../../pages/anime_arabic/anime_arabic_details_page.dart';
-import '../../services/anime_arabic/anime_arabic_service.dart';
-import '../../utils/navigation/route_transitions.dart';
+import '../../services/my_list/my_list_service.dart';
 import '../../services/theme/app_theme_service.dart';
-import '../../services/continue_watching/continue_watching_service.dart';
+import '../../utils/navigation/route_transitions.dart';
 import '../common/slider_arrow.dart';
 
-class ContinueWatchingSlider extends StatefulWidget {
-  final String? typeFilter; // 'main', 'anime', or null for all
+class MyListSlider extends StatefulWidget {
   final String title;
 
-  const ContinueWatchingSlider({
+  const MyListSlider({
     super.key,
-    this.typeFilter,
-    this.title = 'Continue Watching',
+    this.title = 'My List',
   });
 
   @override
-  State<ContinueWatchingSlider> createState() => _ContinueWatchingSliderState();
+  State<MyListSlider> createState() => _MyListSliderState();
 }
 
-class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
+class _MyListSliderState extends State<MyListSlider> {
   late final ScrollController _scrollController;
   bool _canScrollLeft = false;
   bool _canScrollRight = true;
@@ -92,24 +86,9 @@ class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
     final palette = AppThemeService.currentPalette.value;
     final isDesktop = _isDesktop();
 
-    return ValueListenableBuilder<List<ContinueWatchingItem>>(
-      valueListenable: ContinueWatchingService.activeItems,
-      builder: (context, allItems, _) {
-        final items = allItems.where((i) {
-          if (widget.typeFilter == 'main') {
-            return i.type != 'anime' && !i.id.startsWith('anilist:') && !i.id.startsWith('arabic_anime:');
-          } else if (widget.typeFilter == 'anime') {
-            return i.type == 'anime' || i.id.startsWith('anilist:') || i.id.startsWith('arabic_anime:') || i.addonName == 'ArabicAnime';
-          } else if (widget.typeFilter == 'arabic_anime') {
-            return i.id.startsWith('arabic_anime:') || i.addonName == 'ArabicAnime';
-          } else if (widget.typeFilter == 'general_anime') {
-            return (i.type == 'anime' || i.id.startsWith('anilist:')) &&
-                !i.id.startsWith('arabic_anime:') &&
-                i.addonName != 'ArabicAnime';
-          }
-          return true;
-        }).toList();
-
+    return ValueListenableBuilder<List<MyListItem>>(
+      valueListenable: MyListService.items,
+      builder: (context, items, _) {
         if (items.isEmpty) return const SizedBox.shrink();
 
         final screenWidth = MediaQuery.sizeOf(context).width;
@@ -134,11 +113,11 @@ class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
                       width: 4,
                       height: 18,
                       decoration: BoxDecoration(
-                        color: palette.primaryColor,
+                        color: const Color(0xFF7C5CFF),
                         borderRadius: BorderRadius.circular(2),
                         boxShadow: [
                           BoxShadow(
-                            color: palette.primaryColor.withValues(alpha: 0.5),
+                            color: const Color(0xFF7C5CFF).withValues(alpha: 0.5),
                             blurRadius: 8,
                           ),
                         ],
@@ -158,19 +137,19 @@ class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: palette.primaryColor.withValues(alpha: 0.15),
+                        color: const Color(0xFF7C5CFF).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: palette.primaryColor.withValues(alpha: 0.3),
+                          color: const Color(0xFF7C5CFF).withValues(alpha: 0.3),
                           width: 0.8,
                         ),
                       ),
                       child: Text(
                         '${items.length}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: palette.primaryColor,
+                          color: Color(0xFF9D84FF),
                         ),
                       ),
                     ),
@@ -199,17 +178,16 @@ class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
                         separatorBuilder: (_, __) => const SizedBox(width: 14),
                         itemBuilder: (context, index) {
                           final item = items[index];
-                          return _ContinueWatchingCard(
+                          return _MyListHomeCard(
                             item: item,
                             width: cardWidth,
                             palette: palette,
-                            onTap: () => ContinueWatchingService.resumePlayback(context, item),
-                            onRemove: () => ContinueWatchingService.removeItem(item),
+                            onRemove: () => MyListService.remove(item),
                           );
                         },
                       ),
 
-                      // Desktop Floating Scroll Arrows (Matching Anime/Movie Sections)
+                      // Desktop Floating Scroll Arrows
                       if (isDesktop) ...[
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 250),
@@ -250,110 +228,67 @@ class _ContinueWatchingSliderState extends State<ContinueWatchingSlider> {
   }
 }
 
-class _ContinueWatchingCard extends StatefulWidget {
-  final ContinueWatchingItem item;
+class _MyListHomeCard extends StatefulWidget {
+  final MyListItem item;
   final double width;
   final AppThemePalette palette;
-  final VoidCallback onTap;
   final VoidCallback onRemove;
 
-  const _ContinueWatchingCard({
+  const _MyListHomeCard({
     required this.item,
     required this.width,
     required this.palette,
-    required this.onTap,
     required this.onRemove,
   });
 
   @override
-  State<_ContinueWatchingCard> createState() => _ContinueWatchingCardState();
+  State<_MyListHomeCard> createState() => _MyListHomeCardState();
 }
 
-class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
+class _MyListHomeCardState extends State<_MyListHomeCard> {
   bool _isHovered = false;
 
   void _openDetails(BuildContext context) {
     final item = widget.item;
-    if (item.id.startsWith('arabic_anime:') || item.addonName == 'ArabicAnime') {
-      final slug = item.id.replaceAll('arabic_anime:', '');
-      final card = ArabicAnimeCard(
-        slug: slug,
-        title: item.title,
-        cover: item.posterUrl ?? item.backdropUrl,
-      );
+    final effectiveId = item.imdbId ??
+        (item.tmdbId != null ? 'tmdb:${item.tmdbId}' : null) ??
+        item.traktId?.toString() ??
+        '';
 
-      Navigator.push(
-        context,
-        CinematicSlideRoute(
-          page: AnimeArabicDetailsPage(
-            anime: card,
-            initialEpisodeNumber: item.episode,
-          ),
-        ),
-      );
-      return;
-    }
+    final movie = Movie(
+      id: effectiveId,
+      name: item.title,
+      poster: item.poster,
+      year: item.year?.toString(),
+      type: item.type,
+      addonBaseUrl: 'https://v3-cinemeta.strem.io',
+    );
 
-    if (item.type == 'anime' || item.id.startsWith('anilist:')) {
-      final anilistId = int.tryParse(item.id.replaceAll('anilist:', '')) ?? 0;
-      final anime = AnimeMedia(
-        id: anilistId,
-        titleEnglish: item.title,
-        titleRomaji: item.title,
-        titleNative: '',
-        titleUserPreferred: item.title,
-        coverImageLarge: item.posterUrl ?? '',
-        coverImageExtraLarge: item.posterUrl ?? '',
-        bannerImage: item.backdropUrl ?? '',
-        description: '',
-        seasonYear: int.tryParse(item.year ?? '') ?? 0,
-        averageScore: 0,
-        genres: const [],
-        format: 'TV',
-        status: 'RELEASING',
-        totalEpisodes: 0,
-      );
+    final box = context.findRenderObject() as RenderBox?;
+    final offset = box?.localToGlobal(box.size.center(Offset.zero));
 
-      Navigator.push(
-        context,
-        CinematicSlideRoute(page: AnimeDetailsPage(anime: anime)),
-      );
-    } else {
-      final movie = Movie(
-        id: item.id,
-        name: item.title,
-        poster: item.posterUrl ?? item.backdropUrl,
-        year: item.year,
-        type: item.type,
-        addonBaseUrl: '',
-      );
-
-      final box = context.findRenderObject() as RenderBox?;
-      final offset = box?.localToGlobal(box.size.center(Offset.zero));
-
-      Navigator.push(
-        context,
-        LiquidRevealRoute(
-          page: DetailsPage(movie: movie),
-          tapPosition: offset,
-        ),
-      );
-    }
+    Navigator.push(
+      context,
+      LiquidRevealRoute(
+        page: DetailsPage(movie: movie),
+        tapPosition: offset,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     final imgHeight = widget.width * 0.58;
-    final progress = item.progressPercent;
-    final imageUrl = item.backdropUrl ?? item.posterUrl;
+    final imageUrl = item.poster;
+    final isMovie = item.type == 'movie';
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: () => _openDetails(context),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: widget.width,
@@ -364,14 +299,14 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _isHovered
-                  ? widget.palette.primaryColor.withValues(alpha: 0.5)
+                  ? const Color(0xFF7C5CFF).withValues(alpha: 0.7)
                   : Colors.white.withValues(alpha: 0.08),
               width: _isHovered ? 1.4 : 1.0,
             ),
             boxShadow: _isHovered
                 ? [
                     BoxShadow(
-                      color: widget.palette.primaryColor.withValues(alpha: 0.18),
+                      color: const Color(0xFF7C5CFF).withValues(alpha: 0.25),
                       blurRadius: 18,
                       offset: const Offset(0, 4),
                     ),
@@ -383,7 +318,7 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Backdrop / Thumbnail with Play Overlay & Badge
+                // Backdrop / Poster Image Area
                 Stack(
                   children: [
                     Container(
@@ -408,14 +343,14 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withValues(alpha: 0.6),
+                              Colors.black.withValues(alpha: 0.65),
                             ],
                           ),
                         ),
                       ),
                     ),
 
-                    // Centered Play Button on hover
+                    // Centered Play/Open Button on hover
                     Positioned.fill(
                       child: Center(
                         child: AnimatedScale(
@@ -429,10 +364,10 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                               height: 44,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: widget.palette.primaryColor,
+                                color: const Color(0xFF7C5CFF),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: widget.palette.primaryColor.withValues(alpha: 0.5),
+                                    color: const Color(0xFF7C5CFF).withValues(alpha: 0.55),
                                     blurRadius: 14,
                                   ),
                                 ],
@@ -448,7 +383,31 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                       ),
                     ),
 
-                    // Action Buttons (Top-Right: always on mobile, hover-only on desktop)
+                    // Type Badge (Top-Left)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isMovie
+                              ? const Color(0xFF7C5CFF).withValues(alpha: 0.85)
+                              : const Color(0xFF00E5FF).withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isMovie ? 'MOVIE' : 'SERIES',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Action Buttons (Top-Right)
                     if (_isHovered || !(defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux))
                       Positioned(
                         top: 6,
@@ -456,7 +415,7 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Details Button
+                            // Info / Details Button
                             Tooltip(
                               message: 'View Details',
                               child: MouseRegion(
@@ -483,9 +442,9 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            // Dismiss / Remove Button
+                            // Remove Button
                             Tooltip(
-                              message: 'Remove from Continue Watching',
+                              message: 'Remove from My List',
                               child: MouseRegion(
                                 cursor: SystemMouseCursors.click,
                                 child: GestureDetector(
@@ -512,97 +471,12 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                           ],
                         ),
                       ),
-
-                    // Source Tag (Top-Left)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            width: 0.6,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              item.isTorrent ? Icons.cloud_download_rounded : Icons.link_rounded,
-                              size: 10,
-                              color: item.isTorrent ? const Color(0xFF00E5FF) : const Color(0xFF10B981),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.addonName ?? (item.isTorrent ? 'Torrent' : 'Stream'),
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Remaining time / Percentage (Bottom-Right)
-                    Positioned(
-                      bottom: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.75),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          item.remainingMinutes > 0
-                              ? '${item.remainingMinutes}m left'
-                              : '${(progress * 100).toInt()}%',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Bottom Progress Bar
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        height: 3.5,
-                        color: Colors.white.withValues(alpha: 0.15),
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: progress,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: widget.palette.primaryColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: widget.palette.primaryColor.withValues(alpha: 0.6),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
 
-                // Title and Episode Metadata
+                // Card Bottom Content: Title & Year
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -615,20 +489,43 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        item.type == 'series' && item.season != null && item.episode != null
-                            ? 'S${item.season!.toString().padLeft(2, '0')}:E${item.episode!.toString().padLeft(2, '0')}${item.episodeTitle != null ? ' • ${item.episodeTitle}' : ''}'
-                            : (item.year != null ? '${item.year} • Movie' : 'Movie'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.55),
-                        ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          if (item.year != null)
+                            Text(
+                              '${item.year}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white.withValues(alpha: 0.5),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          if (item.source == MyListSource.trakt) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFED1C24),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 8),
+                            ),
+                          ] else if (item.source == MyListSource.simkl) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF00ADFF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 8),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -644,8 +541,12 @@ class _ContinueWatchingCardState extends State<_ContinueWatchingCard> {
   Widget _buildPlaceholder() {
     return Container(
       color: const Color(0xFF1A1D27),
-      child: const Center(
-        child: Icon(Icons.movie_rounded, color: Colors.white24, size: 36),
+      child: Center(
+        child: Icon(
+          widget.item.type == 'movie' ? Icons.movie_rounded : Icons.tv_rounded,
+          color: Colors.white24,
+          size: 32,
+        ),
       ),
     );
   }

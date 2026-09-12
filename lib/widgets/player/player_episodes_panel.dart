@@ -44,10 +44,15 @@ class _PlayerEpisodesPanelState extends State<PlayerEpisodesPanel> {
     // Find the season/batch containing the current episode
     int initialSeason = _seasons.isNotEmpty ? _seasons.first : 1;
     if (widget.currentEpisode != null) {
+      final epSeason = widget.currentEpisode?.season;
+      final epNum = widget.currentEpisode?.episode;
+      final epId = widget.currentEpisode?.id;
+
       for (final entry in _seasonEpisodes.entries) {
         final hasEp = entry.value.any((v) =>
-            v.id == widget.currentEpisode?.id ||
-            (v.episode != null && v.episode == widget.currentEpisode?.episode));
+            v.id == epId ||
+            ((epSeason == null || v.season == null || v.season == epSeason) &&
+             epNum != null && v.episode == epNum));
         if (hasEp) {
           initialSeason = entry.key;
           break;
@@ -117,7 +122,14 @@ class _PlayerEpisodesPanelState extends State<PlayerEpisodesPanel> {
     if (!mounted || widget.currentEpisode == null) return;
 
     final currentList = _seasonEpisodes[_selectedSeason] ?? [];
-    final idx = currentList.indexWhere((v) => v.id == widget.currentEpisode?.id);
+    final epNum = widget.currentEpisode?.episode;
+    final epSeason = widget.currentEpisode?.season;
+    final epId = widget.currentEpisode?.id;
+
+    final idx = currentList.indexWhere((v) =>
+        v.id == epId ||
+        ((epSeason == null || v.season == null || v.season == epSeason) &&
+         epNum != null && v.episode == epNum));
     if (idx < 0) return;
 
     // Approximate card height: 110px compact, 180px expanded

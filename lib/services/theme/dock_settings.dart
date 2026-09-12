@@ -16,6 +16,13 @@ enum DockItemKey {
     isRemovable: true,
     description: 'Explore and filter addon catalogs, genres, and special selectors.',
   ),
+  myList(
+    key: 'mylist',
+    label: 'My List',
+    icon: Icons.favorite_rounded,
+    isRemovable: true,
+    description: 'Access your saved bookmarks, watchlist, and favorites.',
+  ),
   manga(
     key: 'manga',
     label: 'Manga',
@@ -71,13 +78,6 @@ enum DockItemKey {
     icon: Icons.download_rounded,
     isRemovable: true,
     description: 'View active torrent and direct media download tasks.',
-  ),
-  myList(
-    key: 'mylist',
-    label: 'My List',
-    icon: Icons.favorite_rounded,
-    isRemovable: true,
-    description: 'Access your saved bookmarks, watchlist, and favorites.',
   ),
   settings(
     key: 'settings',

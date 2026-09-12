@@ -25,6 +25,7 @@ class _SliderArrowState extends State<SliderArrow> with SingleTickerProviderStat
     final scale = _isPressed ? 0.90 : (_isHovered ? 1.08 : 1.0);
     
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() {
         _isHovered = false;
