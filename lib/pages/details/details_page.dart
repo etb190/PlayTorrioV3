@@ -397,7 +397,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
         savedEpisodeId = prefs.getString('last_watched_episode_id_${widget.movie.id}');
 
         if (savedSeason == null) {
-          for (final item in ContinueWatchingService.activeItems) {
+          for (final item in ContinueWatchingService.activeItems.value) {
             if (item.id == widget.movie.id) {
               savedSeason = item.season;
               savedEpisode = item.episode;
