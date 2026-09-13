@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -398,11 +397,13 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
         savedEpisodeId = prefs.getString('last_watched_episode_id_${widget.movie.id}');
 
         if (savedSeason == null) {
-          final cw = ContinueWatchingService.activeItems.firstWhereOrNull((item) => item.id == widget.movie.id);
-          if (cw != null) {
-            savedSeason = cw.season;
-            savedEpisode = cw.episode;
-            savedEpisodeId = cw.episodeId;
+          for (final item in ContinueWatchingService.activeItems) {
+            if (item.id == widget.movie.id) {
+              savedSeason = item.season;
+              savedEpisode = item.episode;
+              savedEpisodeId = item.episodeId;
+              break;
+            }
           }
         }
       } catch (e) {
@@ -1066,11 +1067,22 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
   Widget _buildPlayButton({required bool fullWidth}) {
     Video? targetEp;
     if (_lastWatchedEpisodeId != null || _lastWatchedEpisode != null) {
-      targetEp = _currentSeasonEpisodes.firstWhereOrNull(
-        (v) => (v.id == _lastWatchedEpisodeId) || (v.episode == _lastWatchedEpisode),
-      ) ?? (_detail?.videos.isNotEmpty == true ? _detail!.videos.firstWhereOrNull(
-        (v) => (v.id == _lastWatchedEpisodeId) || (v.episode == _lastWatchedEpisode),
-      ) : null);
+      for (final v in _currentSeasonEpisodes) {
+        if ((_lastWatchedEpisodeId != null && v.id == _lastWatchedEpisodeId) ||
+            (_lastWatchedEpisode != null && v.episode == _lastWatchedEpisode)) {
+          targetEp = v;
+          break;
+        }
+      }
+      if (targetEp == null && _detail?.videos.isNotEmpty == true) {
+        for (final v in _detail!.videos) {
+          if ((_lastWatchedEpisodeId != null && v.id == _lastWatchedEpisodeId) ||
+              (_lastWatchedEpisode != null && v.episode == _lastWatchedEpisode)) {
+            targetEp = v;
+            break;
+          }
+        }
+      }
     }
     targetEp ??= _currentSeasonEpisodes.isNotEmpty
         ? _currentSeasonEpisodes.first
