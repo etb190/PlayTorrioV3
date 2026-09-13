@@ -49,13 +49,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows App
-        shell: pwsh
-        run: |
-          $output = flutter build windows --release --dart-define-from-file=.env 2>&1 | Tee-Object -Variable buildLogs
-          if ($LASTEXITCODE -ne 0) {
-            "### ❌ Flutter Build Failed`n````n$($buildLogs -join "`n")`n```" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
-            exit 1
-          }
+        run: flutter build windows --release --dart-define-from-file=.env
 
       - name: Install Inno Setup
         shell: pwsh
