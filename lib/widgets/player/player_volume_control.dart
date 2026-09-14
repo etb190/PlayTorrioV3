@@ -73,19 +73,11 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
     final boostColor = _getBoostColor();
     final pct = (effectiveVol * 100).round();
 
-    return Listener(
-      onPointerSignal: (pointerSignal) {
-        if (pointerSignal is PointerScrollEvent) {
-          final delta = pointerSignal.scrollDelta.dy < 0 ? 0.05 : -0.05;
-          final next = (widget.volume + delta).clamp(0.0, PlayerVolumeControl.maxVolume);
-          widget.onVolumeChanged((next * 100).round() / 100.0);
-        }
-      },
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
           children: [
             // Mute / Unmute Button
             PlayerIconButton(

@@ -250,6 +250,7 @@ class _TvCalendarPageState extends State<TvCalendarPage> {
               children: [
                 // Back Button
                 IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
                   onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Back',
@@ -641,6 +642,7 @@ class _TvCalendarPageState extends State<TvCalendarPage> {
     required VoidCallback onTap,
   }) {
     return InkWell(
+      mouseCursor: SystemMouseCursors.click,
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
@@ -670,6 +672,7 @@ class _TvCalendarPageState extends State<TvCalendarPage> {
     required VoidCallback onTap,
   }) {
     return InkWell(
+      mouseCursor: SystemMouseCursors.click,
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(

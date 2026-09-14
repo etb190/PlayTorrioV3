@@ -357,10 +357,7 @@ class _HomePageState extends State<HomePage> {
                 itemCount: _sections.length + 4,
                 itemBuilder: (context, index) {
                   if (index == 0) {
-                    if (!HomePageSettings.enableSpotlight.value) {
-                      return SizedBox(height: topPadding + 76);
-                    }
-                    return _HeroCarousel(movies: _featuredMovies);
+                    return SizedBox(height: topPadding + 84);
                   }
                   if (index == 1) {
                     return const ContinueWatchingSlider(typeFilter: 'main');

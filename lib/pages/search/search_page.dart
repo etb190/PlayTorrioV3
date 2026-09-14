@@ -292,6 +292,7 @@ class _SearchPageState extends State<SearchPage> {
                 children: [
                   const SizedBox(width: 8),
                   IconButton(
+                    mouseCursor: SystemMouseCursors.click,
                     icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
                     color: Colors.white,
                     onPressed: () => Navigator.pop(context),
@@ -312,29 +313,46 @@ class _SearchPageState extends State<SearchPage> {
                           controller: _searchController,
                           focusNode: _focusNode,
                           autofocus: true,
+                          textAlignVertical: TextAlignVertical.center,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w500,
+                            height: 1.0,
                           ),
                           textInputAction: TextInputAction.search,
                           onChanged: _onSearchChanged,
                           onSubmitted: _performSearch,
                           decoration: InputDecoration(
+                            isDense: true,
                             hintText: 'Search movies, series, or paste links',
                             hintStyle: TextStyle(
                               color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 14,
+                              fontSize: 14.5,
+                              height: 1.0,
                             ),
                             border: InputBorder.none,
-                            prefixIcon: const Icon(
-                              Icons.search_rounded,
-                              size: 19,
-                              color: Colors.white38,
+                            prefixIcon: const SizedBox(
+                              width: 42,
+                              height: 42,
+                              child: Center(
+                                child: Icon(
+                                  Icons.search_rounded,
+                                  size: 20,
+                                  color: Colors.white38,
+                                ),
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 42,
+                              maxWidth: 42,
+                              minHeight: 42,
+                              maxHeight: 42,
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                            suffixIconConstraints: const BoxConstraints(
+                              minHeight: 42,
+                              maxHeight: 42,
                             ),
                             suffixIcon: Row(
                               mainAxisSize: MainAxisSize.min,

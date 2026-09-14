@@ -15,6 +15,7 @@ class PlayerTopBar extends StatelessWidget {
   final VoidCallback? onDownload;
   final bool isDownloading;
   final VoidCallback? onCopyStreamUrl;
+  final VoidCallback? onTitleTap;
 
   const PlayerTopBar({
     super.key,
@@ -30,6 +31,7 @@ class PlayerTopBar extends StatelessWidget {
     this.onDownload,
     this.isDownloading = false,
     this.onCopyStreamUrl,
+    this.onTitleTap,
   });
 
   @override
@@ -74,49 +76,67 @@ class PlayerTopBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          shadows: [
-                            Shadow(
-                              color: Color(0x99000000),
-                              offset: Offset(0, 2),
-                              blurRadius: 8,
+                MouseRegion(
+                  cursor: onTitleTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onTitleTap,
+                    child: Tooltip(
+                      message: onTitleTap != null ? 'View Seasons & Episodes' : '',
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.2,
+                                shadows: [
+                                  Shadow(
+                                    color: Color(0x99000000),
+                                    offset: Offset(0, 2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (onTitleTap != null) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
+                              color: Colors.white.withValues(alpha: 0.5),
                             ),
                           ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                          if (quality != null && quality!.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                quality!.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Color(0xDDFFFFFF),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    if (quality != null && quality!.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          quality!.toUpperCase(),
-                          style: const TextStyle(
-                            color: Color(0xDDFFFFFF),
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   const SizedBox(height: 2),

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -462,17 +461,7 @@ class _IptvPlayerPageState extends State<IptvPlayerPage>
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Listener(
-          onPointerSignal: (pointerSignal) {
-            if (pointerSignal is PointerScrollEvent) {
-              if (pointerSignal.scrollDelta.dy < 0) {
-                _adjustVolume(0.05); // Scroll up -> Volume up
-              } else if (pointerSignal.scrollDelta.dy > 0) {
-                _adjustVolume(-0.05); // Scroll down -> Volume down
-              }
-            }
-          },
-          child: GestureDetector(
+        body: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: _toggleControls,
             onDoubleTap: () {
@@ -1202,8 +1191,7 @@ class _IptvPlayerPageState extends State<IptvPlayerPage>
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

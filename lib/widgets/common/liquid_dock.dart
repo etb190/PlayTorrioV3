@@ -136,6 +136,7 @@ class _LiquidDockState extends State<LiquidDock> {
             width: 30,
             height: 44,
             child: IconButton(
+              mouseCursor: SystemMouseCursors.click,
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.chevron_left_rounded, color: Colors.white70, size: 20),
               onPressed: () => _scrollBy(-180),
@@ -197,6 +198,7 @@ class _LiquidDockState extends State<LiquidDock> {
             width: 30,
             height: 44,
             child: IconButton(
+              mouseCursor: SystemMouseCursors.click,
               padding: EdgeInsets.zero,
               icon: const Icon(
                 Icons.chevron_right_rounded,

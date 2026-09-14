@@ -55,6 +55,7 @@ class WatchScreen extends StatefulWidget {
   final Duration? initialPosition;
 
   final bool isCollection;
+  final bool openedFromDetails;
 
   const WatchScreen({
     super.key,
@@ -63,6 +64,7 @@ class WatchScreen extends StatefulWidget {
     required this.type,
     this.initialPosition,
     this.isCollection = false,
+    this.openedFromDetails = false,
   });
 
   @override
@@ -87,6 +89,10 @@ class _WatchScreenState extends State<WatchScreen>
   final List<StreamSource> _pendingSources = [];
   Timer? _sourceBatchTimer;
   bool _isLoadingSources = true;
+
+  // Search
+  final TextEditingController _sourceSearchController = TextEditingController();
+  String _sourceSearchQuery = '';
 
   // Animation
   late AnimationController _animController;
@@ -141,6 +147,7 @@ class _WatchScreenState extends State<WatchScreen>
     _animController.dispose();
     _sourcesScrollController.dispose();
     _mainScrollController.dispose();
+    _sourceSearchController.dispose();
     super.dispose();
   }
 
@@ -276,6 +283,20 @@ class _WatchScreenState extends State<WatchScreen>
           .toList();
     }
 
+    // Filter by search query
+    if (_sourceSearchQuery.trim().isNotEmpty) {
+      final q = _sourceSearchQuery.trim().toLowerCase();
+      list = list.where((s) {
+        final nameMatch = s.name != null && s.name!.toLowerCase().contains(q);
+        final descMatch = s.description != null && s.description!.toLowerCase().contains(q);
+        final addonMatch = s.addonName.toLowerCase().contains(q);
+        final resMatch = s.resolution != null && s.resolution!.toLowerCase().contains(q);
+        final qualityMatch = s.quality != null && s.quality!.toLowerCase().contains(q);
+        final fileMatch = s.fileTitle != null && s.fileTitle!.toLowerCase().contains(q);
+        return nameMatch || descMatch || addonMatch || resMatch || qualityMatch || fileMatch;
+      }).toList();
+    }
+
     // Filter by active status of built-in providers
     if (!AddonManager.instance.isPlayTorrioActive) {
       list = list.where((s) => !s.isTorrent || s.isDebrid).toList();
@@ -374,6 +395,78 @@ class _WatchScreenState extends State<WatchScreen>
       default:
         return 'All Sizes';
     }
+  }
+
+  void _navigateToDetails() {
+    if (widget.openedFromDetails && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      final d = widget.detail;
+      final movie = Movie(
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        poster: d.poster,
+        backdrop: d.backdrop,
+        year: d.year,
+        description: d.description,
+        genres: d.genres,
+        rating: d.imdbRating != null ? double.tryParse(d.imdbRating!) : null,
+        isCollection: d.isCollection,
+      );
+      Navigator.push(
+        context,
+        CinematicSlideRoute(page: DetailsPage(movie: movie)),
+      );
+    }
+  }
+
+  Widget _buildSourceSearchBar() {
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: _C.surfaceLight.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _sourceSearchQuery.isNotEmpty
+              ? _C.accent.withValues(alpha: 0.6)
+              : Colors.white.withValues(alpha: 0.10),
+        ),
+      ),
+      child: TextField(
+        controller: _sourceSearchController,
+        style: const TextStyle(color: _C.textPrimary, fontSize: 13),
+        cursorColor: _C.accent,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: InputBorder.none,
+          hintText: 'Search sources (e.g. 1080p, 4k, Torrentio, HEVC)...',
+          hintStyle: TextStyle(color: _C.textTertiary.withValues(alpha: 0.75), fontSize: 13),
+          prefixIcon: const Icon(Icons.search_rounded, color: _C.textTertiary, size: 18),
+          prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          suffixIcon: _sourceSearchQuery.isNotEmpty
+              ? MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () {
+                      _sourceSearchController.clear();
+                      setState(() => _sourceSearchQuery = '');
+                    },
+                    child: const Icon(Icons.close_rounded, color: _C.textTertiary, size: 16),
+                  ),
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        onChanged: (val) {
+          setState(() {
+            _sourceSearchQuery = val;
+          });
+        },
+      ),
+    );
   }
 
   bool _isDesktop() => MediaQuery.sizeOf(context).width >= 900;
@@ -559,24 +652,67 @@ class _WatchScreenState extends State<WatchScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.stream_rounded,
-                              color: _C.accent,
-                              size: 20,
-                            ),
-                            SizedBox(width: _S.xs),
-                            Text(
-                              'Watch Sources',
-                              style: TextStyle(
-                                color: _C.textPrimary,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.stream_rounded,
+                                color: _C.accent,
+                                size: 20,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: _S.xs),
+                              const Text(
+                                'Watch Sources',
+                                style: TextStyle(
+                                  color: _C.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Tooltip(
+                                  message: 'View Seasons & Episodes',
+                                  child: MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: _navigateToDetails,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                widget.detail.name,
+                                                style: const TextStyle(
+                                                  color: _C.textSecondary,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 3),
+                                            const Icon(Icons.open_in_new_rounded, size: 11, color: _C.textTertiary),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           _isLoadingSources
                               ? (filtered.isEmpty
@@ -590,6 +726,8 @@ class _WatchScreenState extends State<WatchScreen>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    _buildSourceSearchBar(),
                     if (_sources.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Wrap(
@@ -703,22 +841,31 @@ class _WatchScreenState extends State<WatchScreen>
       children: [
         // Episode info header (if applicable)
         if (ep != null) ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _C.accent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _C.accent.withValues(alpha: 0.3)),
-            ),
-            child: Text(
-              _isCollection
-                  ? 'PART ${ep.episode ?? 1}'
-                  : 'S${ep.season ?? '?' }E${ep.episode ?? '?' }',
-              style: const TextStyle(
-                color: _C.accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _navigateToDetails,
+              child: Tooltip(
+                message: 'View Seasons & Episodes',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _C.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _C.accent.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    _isCollection
+                        ? 'PART ${ep.episode ?? 1}'
+                        : 'S${ep.season ?? '?' }E${ep.episode ?? '?' }',
+                    style: const TextStyle(
+                      color: _C.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -733,12 +880,21 @@ class _WatchScreenState extends State<WatchScreen>
         if (ep != null && ep.title.isNotEmpty && ep.title != meta.name)
           Padding(
             padding: const EdgeInsets.only(bottom: _S.sm),
-            child: Text(
-              ep.title,
-              style: TextStyle(
-                fontSize: isDesktop ? 20 : 17,
-                fontWeight: FontWeight.w600,
-                color: _C.textPrimary.withValues(alpha: 0.85),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _navigateToDetails,
+                child: Tooltip(
+                  message: 'View Seasons & Episodes',
+                  child: Text(
+                    ep.title,
+                    style: TextStyle(
+                      fontSize: isDesktop ? 20 : 17,
+                      fontWeight: FontWeight.w600,
+                      color: _C.textPrimary.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -787,8 +943,9 @@ class _WatchScreenState extends State<WatchScreen>
   }
 
   Widget _buildLogoOrTitle(MovieDetail meta, bool isDesktop) {
+    Widget titleWidget;
     if (meta.logo != null && meta.logo!.isNotEmpty) {
-      return ConstrainedBox(
+      titleWidget = ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: isDesktop ? 380 : 260,
           maxHeight: isDesktop ? 120 : 80,
@@ -800,8 +957,20 @@ class _WatchScreenState extends State<WatchScreen>
           errorWidget: (_, __, ___) => _buildTextTitle(meta.name, isDesktop),
         ),
       );
+    } else {
+      titleWidget = _buildTextTitle(meta.name, isDesktop);
     }
-    return _buildTextTitle(meta.name, isDesktop);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _navigateToDetails,
+        child: Tooltip(
+          message: 'View Seasons & Episodes',
+          child: titleWidget,
+        ),
+      ),
+    );
   }
 
   Widget _buildTextTitle(String text, bool isDesktop) {
@@ -1145,21 +1314,63 @@ class _WatchScreenState extends State<WatchScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.stream_rounded, color: _C.accent, size: 20),
-                SizedBox(width: _S.xs),
-                Text(
-                  'Watch Sources',
-                  style: TextStyle(
-                    color: _C.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.stream_rounded, color: _C.accent, size: 20),
+                  const SizedBox(width: _S.xs),
+                  const Text(
+                    'Watch Sources',
+                    style: TextStyle(
+                      color: _C.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Tooltip(
+                      message: 'View Seasons & Episodes',
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: _navigateToDetails,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    widget.detail.name,
+                                    style: const TextStyle(
+                                      color: _C.textSecondary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.open_in_new_rounded, size: 12, color: _C.textTertiary),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               _isLoadingSources
                   ? (filtered.isEmpty
@@ -1171,6 +1382,9 @@ class _WatchScreenState extends State<WatchScreen>
           ],
         ),
         const SizedBox(height: 10),
+
+        // Search Bar
+        _buildSourceSearchBar(),
 
         // Stream Type Filter Bar (All / Debrid / Torrents / Direct HTTP)
         if (_sources.isNotEmpty) ...[
@@ -2723,6 +2937,56 @@ class _WatchScreenState extends State<WatchScreen>
   }
 
   Widget _buildEmptyState() {
+    if (_sourceSearchQuery.trim().isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Text(
+              'No sources found matching "$_sourceSearchQuery"',
+              style: const TextStyle(color: _C.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try searching for a different resolution, codec or addon.',
+              style: TextStyle(color: _C.textTertiary.withValues(alpha: 0.8), fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  _sourceSearchController.clear();
+                  setState(() => _sourceSearchQuery = '');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _C.accent.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _C.accent.withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.clear_rounded, size: 16, color: _C.accent),
+                      SizedBox(width: 6),
+                      Text('Clear Search', style: TextStyle(color: _C.accent, fontSize: 13, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return const _EmptySourcesStateWidget();
   }
 
@@ -2754,14 +3018,18 @@ class _WatchScreenState extends State<WatchScreen>
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
-      child: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: _C.textPrimary,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: IconButton(
+          mouseCursor: SystemMouseCursors.click,
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 18,
+            color: _C.textPrimary,
+          ),
+          onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
         ),
-        onPressed: () => Navigator.pop(context),
-        padding: EdgeInsets.zero,
       ),
     );
   }

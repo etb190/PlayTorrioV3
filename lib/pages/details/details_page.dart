@@ -203,6 +203,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
           type: _resolvedType ?? _detail!.type,
           selectedEpisode: ep,
           isCollection: _isCollection,
+          openedFromDetails: true,
         ),
       ),
     );
@@ -728,6 +729,7 @@ class _DetailsPageState extends State<DetailsPage> with SingleTickerProviderStat
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: IconButton(
+                mouseCursor: SystemMouseCursors.click,
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
                 onPressed: () => Navigator.pop(context),
                 style: IconButton.styleFrom(

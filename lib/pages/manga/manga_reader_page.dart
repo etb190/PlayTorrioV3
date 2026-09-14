@@ -933,6 +933,7 @@ class _MangaReaderPageState extends State<MangaReaderPage> {
           child: Row(
             children: [
               IconButton(
+                mouseCursor: SystemMouseCursors.click,
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),

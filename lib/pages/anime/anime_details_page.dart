@@ -349,6 +349,7 @@ class _AnimeDetailsPageState extends State<AnimeDetailsPage>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: const Icon(
                     Icons.arrow_back_ios_new_rounded,
                     color: Colors.white,

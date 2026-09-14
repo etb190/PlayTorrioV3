@@ -47,6 +47,8 @@ import '../../services/download/download_service.dart';
 import '../../utils/download/download_path_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/metadata/metadata_service.dart';
+import '../../models/movie/movie.dart';
+import '../details/details_page.dart';
 
 class PlayerScreen extends StatefulWidget {
   final StreamSource source;
@@ -943,6 +945,36 @@ class _PlayerScreenState extends State<PlayerScreen>
     _startHideControlsTimer();
   }
 
+  void _openDetailsFromPlayer() {
+    final d = _detail ?? widget.detail;
+    if (d == null) return;
+
+    _player.pause();
+    if (!_wasFullscreenBeforeEntering && WindowService.instance.isFullscreen) {
+      WindowService.instance.exitFullscreen();
+    }
+
+    final movie = Movie(
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      poster: d.poster,
+      backdrop: d.backdrop,
+      year: d.year,
+      description: d.description,
+      genres: d.genres,
+      rating: d.imdbRating != null ? double.tryParse(d.imdbRating!) : null,
+      isCollection: d.isCollection,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetailsPage(movie: movie),
+      ),
+    );
+  }
+
   void _toggleEpisodesPanel() {
     setState(() {
       _showEpisodesPanel = !_showEpisodesPanel;
@@ -1314,24 +1346,15 @@ class _PlayerScreenState extends State<PlayerScreen>
             }
             return KeyEventResult.ignored;
           },
-          child: Listener(
-            onPointerSignal: (pointerSignal) {
-              if (pointerSignal is PointerScrollEvent) {
-                final delta = pointerSignal.scrollDelta.dy < 0 ? 0.05 : -0.05;
-                final next = (_volume + delta).clamp(0.0, PlayerVolumeControl.maxVolume);
-                _applyVolume((next * 100).round() / 100.0, showHud: true);
-              }
-            },
-            child: MouseRegion(
-              cursor: (_showControls || _isLoading || _activeMenu != null)
-                  ? SystemMouseCursors.basic
-                  : SystemMouseCursors.none,
-              onHover: (_) => _handlePointerActivity(),
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _handleScreenTap,
-                child: _buildPlayerBody(),
-              ),
+          child: MouseRegion(
+            cursor: (_showControls || _isLoading || _activeMenu != null)
+                ? SystemMouseCursors.basic
+                : SystemMouseCursors.none,
+            onHover: (_) => _handlePointerActivity(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _handleScreenTap,
+              child: _buildPlayerBody(),
             ),
           ),
         ),
@@ -1573,6 +1596,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       title: _detail?.name ?? widget.detail?.name ?? _currentTitle,
                       subtitle: episodeSubtitle,
                       quality: _currentSource.name,
+                      onTitleTap: (_detail != null || widget.detail != null) ? _openDetailsFromPlayer : null,
                       onDownload: (_isLoading || isOfflineFile) ? null : _handleDownloadMedia,
                       isDownloading: isDownloading,
                       onCopyStreamUrl: _isLoading ? null : _handleCopyStreamUrl,

@@ -455,6 +455,7 @@ class _PlayerEpisodesPanelState extends State<PlayerEpisodesPanel> {
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
+                    mouseCursor: SystemMouseCursors.click,
                     onTap: () => _selectSeason(season),
                     borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
@@ -522,6 +523,7 @@ class _PlayerEpisodesPanelState extends State<PlayerEpisodesPanel> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          mouseCursor: SystemMouseCursors.click,
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(

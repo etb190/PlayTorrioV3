@@ -321,6 +321,7 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: const Color(0xFF0D1017).withValues(alpha: 0.85),
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
+          mouseCursor: SystemMouseCursors.click,
           icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
@@ -717,6 +718,7 @@ class _SettingsCategoryTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        mouseCursor: SystemMouseCursors.click,
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(

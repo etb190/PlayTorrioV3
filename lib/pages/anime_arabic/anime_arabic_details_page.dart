@@ -359,6 +359,7 @@ class _AnimeArabicDetailsPageState extends State<AnimeArabicDetailsPage>
                   child: Row(
                     children: [
                       IconButton(
+                        mouseCursor: SystemMouseCursors.click,
                         icon: const Icon(
                           Icons.arrow_back_ios_new_rounded,
                           color: Colors.white,

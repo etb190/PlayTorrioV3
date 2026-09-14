@@ -242,6 +242,7 @@ class _MyListPageState extends State<MyListPage> {
       child: Row(
         children: [
           IconButton(
+            mouseCursor: SystemMouseCursors.click,
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 18),
             style: IconButton.styleFrom(

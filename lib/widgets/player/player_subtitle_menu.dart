@@ -130,7 +130,9 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
         setState(() {
           _dynamicGroups = results;
           if (_dynamicGroups.isNotEmpty && _selectedLanguage == null) {
-            _selectedLanguage = _dynamicGroups.first.language;
+            final preferred = _dynamicGroups.where((g) => _getPriorityIndex(g.language) == 0).firstOrNull ??
+                              _dynamicGroups.where((g) => _getPriorityIndex(g.language) < 999).firstOrNull;
+            _selectedLanguage = preferred?.language ?? _dynamicGroups.first.language;
           }
         });
       }
@@ -139,6 +141,27 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
     } finally {
       if (mounted) setState(() => _isLoadingSearch = false);
     }
+  }
+
+  int _getPriorityIndex(String langName) {
+    final l = langName.toLowerCase();
+    if (l == 'english' || l == 'en' || l == 'eng' || l.startsWith('en')) return 0;
+    if (l == 'spanish' || l == 'es' || l == 'spa' || l.contains('spanish') || l.contains('castellano') || l.contains('español')) return 1;
+    if (l == 'arabic' || l == 'ar' || l == 'ara' || l.contains('arabic') || l.contains('عرب')) return 2;
+    if (l == 'french' || l == 'fr' || l == 'fre' || l == 'fra' || l.contains('french') || l.contains('français')) return 3;
+    if (l == 'italian' || l == 'it' || l == 'ita' || l.contains('italian') || l.contains('italiano')) return 4;
+    return 999;
+  }
+
+  List<SubtitleLanguageGroup> get _priorityGroups {
+    return _dynamicGroups.where((g) => _getPriorityIndex(g.language) < 999).toList()
+      ..sort((a, b) => _getPriorityIndex(a.language).compareTo(_getPriorityIndex(b.language)));
+  }
+
+  List<SubtitleLanguageGroup> get _otherGroups {
+    final list = _dynamicGroups.where((g) => _getPriorityIndex(g.language) == 999).toList();
+    list.sort((a, b) => a.language.toLowerCase().compareTo(b.language.toLowerCase()));
+    return list;
   }
 
   String _getLanguageEmoji(String lang) {
@@ -429,6 +452,23 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
               const SizedBox(width: 6),
             ],
 
+            // Priority Languages Pills (English, Spanish, Arabic, French, Italian)
+            if (_priorityGroups.isNotEmpty) ...[
+              ..._priorityGroups.map((g) {
+                final isSelected = _selectedLanguage == g.language;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _buildLanguagePill(
+                    label: g.language,
+                    emoji: _getLanguageEmoji(g.language),
+                    count: g.variants.length,
+                    isSelected: isSelected,
+                    onTap: () => setState(() => _selectedLanguage = g.language),
+                  ),
+                );
+              }),
+            ],
+
             // All Languages Pill
             if (_dynamicGroups.isNotEmpty) ...[
               _buildLanguagePill(
@@ -440,8 +480,8 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
               ),
               const SizedBox(width: 6),
 
-              // Individual Languages
-              ..._dynamicGroups.map((g) {
+              // Other Languages
+              ..._otherGroups.map((g) {
                 final isSelected = _selectedLanguage == g.language;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -472,6 +512,7 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        mouseCursor: SystemMouseCursors.click,
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
@@ -520,6 +561,55 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
                   ),
                 ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarLanguageItem(SubtitleLanguageGroup g) {
+    final isSelected = _selectedLanguage == g.language;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        mouseCursor: SystemMouseCursors.click,
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => setState(() => _selectedLanguage = g.language),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6.5),
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: isSelected ? PlayerTheme.raised : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? PlayerTheme.edge : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(_getLanguageEmoji(g.language), style: const TextStyle(fontSize: 11.5)),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  g.language,
+                  style: TextStyle(
+                    color: isSelected ? PlayerTheme.ink : PlayerTheme.inkMuted,
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '${g.variants.length}',
+                style: const TextStyle(
+                  color: PlayerTheme.inkSubtle,
+                  fontSize: 9.5,
+                ),
+              ),
             ],
           ),
         ),
@@ -671,10 +761,26 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
               ],
 
               if (_dynamicGroups.isNotEmpty) ...[
+                if (_priorityGroups.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, top: 10, bottom: 4),
+                    child: Text(
+                      'QUICK ACCESS',
+                      style: TextStyle(
+                        color: PlayerTheme.inkSubtle,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  ..._priorityGroups.map(_buildSidebarLanguageItem),
+                ],
+
                 const Padding(
                   padding: EdgeInsets.only(left: 8, top: 10, bottom: 4),
                   child: Text(
-                    'LANGUAGES',
+                    'ALL LANGUAGES',
                     style: TextStyle(
                       color: PlayerTheme.inkSubtle,
                       fontSize: 9,
@@ -688,6 +794,7 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
+                    mouseCursor: SystemMouseCursors.click,
                     borderRadius: BorderRadius.circular(8),
                     onTap: () => setState(() => _selectedLanguage = '__all__'),
                     child: Container(
@@ -730,54 +837,9 @@ class _PlayerSubtitleMenuState extends State<PlayerSubtitleMenu> {
                   ),
                 ),
 
-                // Individual Language Groups
-                ..._dynamicGroups.map((g) {
-                  final isSelected = _selectedLanguage == g.language;
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => setState(() => _selectedLanguage = g.language),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6.5),
-                        margin: const EdgeInsets.only(bottom: 2),
-                        decoration: BoxDecoration(
-                          color: isSelected ? PlayerTheme.raised : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected ? PlayerTheme.edge : Colors.transparent,
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(_getLanguageEmoji(g.language), style: const TextStyle(fontSize: 11.5)),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                g.language,
-                                style: TextStyle(
-                                  color: isSelected ? PlayerTheme.ink : PlayerTheme.inkMuted,
-                                  fontSize: 11.5,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              '${g.variants.length}',
-                              style: const TextStyle(
-                                color: PlayerTheme.inkSubtle,
-                                fontSize: 9.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
+                if (_otherGroups.isNotEmpty) ...[
+                  ..._otherGroups.map(_buildSidebarLanguageItem),
+                ],
               ],
             ],
           ),
