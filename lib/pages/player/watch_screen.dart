@@ -289,11 +289,10 @@ class _WatchScreenState extends State<WatchScreen>
       list = list.where((s) {
         final nameMatch = s.name != null && s.name!.toLowerCase().contains(q);
         final descMatch = s.description != null && s.description!.toLowerCase().contains(q);
+        final titleMatch = s.title != null && s.title!.toLowerCase().contains(q);
         final addonMatch = s.addonName.toLowerCase().contains(q);
-        final resMatch = s.resolution != null && s.resolution!.toLowerCase().contains(q);
         final qualityMatch = s.quality != null && s.quality!.toLowerCase().contains(q);
-        final fileMatch = s.fileTitle != null && s.fileTitle!.toLowerCase().contains(q);
-        return nameMatch || descMatch || addonMatch || resMatch || qualityMatch || fileMatch;
+        return nameMatch || descMatch || titleMatch || addonMatch || qualityMatch;
       }).toList();
     }
 
@@ -407,12 +406,9 @@ class _WatchScreenState extends State<WatchScreen>
         name: d.name,
         type: d.type,
         poster: d.poster,
-        backdrop: d.backdrop,
         year: d.year,
-        description: d.description,
-        genres: d.genres,
-        rating: d.imdbRating != null ? double.tryParse(d.imdbRating!) : null,
-        isCollection: d.isCollection,
+        addonBaseUrl: '',
+        imdbRating: d.imdbRating,
       );
       Navigator.push(
         context,

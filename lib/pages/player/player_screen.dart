@@ -959,12 +959,9 @@ class _PlayerScreenState extends State<PlayerScreen>
       name: d.name,
       type: d.type,
       poster: d.poster,
-      backdrop: d.backdrop,
       year: d.year,
-      description: d.description,
-      genres: d.genres,
-      rating: d.imdbRating != null ? double.tryParse(d.imdbRating!) : null,
-      isCollection: d.isCollection,
+      addonBaseUrl: '',
+      imdbRating: d.imdbRating,
     );
 
     Navigator.push(

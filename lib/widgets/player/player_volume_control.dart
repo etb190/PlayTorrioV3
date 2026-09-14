@@ -204,7 +204,6 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
             ],
           ],
         ),
-      ),
-    );
+      );
   }
 }
