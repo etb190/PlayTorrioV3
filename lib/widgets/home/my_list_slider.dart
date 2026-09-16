@@ -7,6 +7,7 @@ import '../../models/movie/movie.dart';
 import '../../models/my_list/my_list_item.dart';
 import '../../pages/details/details_page.dart';
 import '../../services/continue_watching/continue_watching_service.dart';
+import '../../services/metadata/metadata_service.dart';
 import '../../services/my_list/my_list_service.dart';
 import '../../services/theme/app_theme_service.dart';
 import '../../utils/navigation/route_transitions.dart';
@@ -249,6 +250,47 @@ class _MyListHomeCard extends StatefulWidget {
 
 class _MyListHomeCardState extends State<_MyListHomeCard> {
   bool _isHovered = false;
+  String? _resolvedTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkResolveTitle();
+  }
+
+  @override
+  void didUpdateWidget(_MyListHomeCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.title != widget.item.title) {
+      _checkResolveTitle();
+    }
+  }
+
+  void _checkResolveTitle() {
+    final title = widget.item.title;
+    if (title.startsWith('tt') && RegExp(r'^tt\d+$').hasMatch(title)) {
+      MetadataService.fetchMeta(
+        baseUrl: 'https://v3-cinemeta.strem.io',
+        type: widget.item.type,
+        imdbId: title,
+      ).then((meta) {
+        if (mounted && meta != null && meta.name.isNotEmpty) {
+          setState(() => _resolvedTitle = meta.name);
+        }
+      }).catchError((_) {});
+    }
+  }
+
+  String get _displayTitle {
+    if (_resolvedTitle != null && _resolvedTitle!.isNotEmpty) {
+      return _resolvedTitle!;
+    }
+    final raw = widget.item.title;
+    if (raw.startsWith('tt') && RegExp(r'^tt\d+$').hasMatch(raw)) {
+      return widget.item.type == 'movie' ? 'Movie' : 'Series';
+    }
+    return raw;
+  }
 
   void _openDetails(BuildContext context) {
     final item = widget.item;
@@ -490,7 +532,7 @@ class _MyListHomeCardState extends State<_MyListHomeCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        item.title,
+                        _displayTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -524,22 +566,9 @@ class _MyListHomeCardState extends State<_MyListHomeCard> {
                                 ),
                               ),
                             ),
-                            if (item.year != null) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                '${item.year}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white.withValues(alpha: 0.5),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
                           ] else ...[
                             Text(
-                              item.year != null
-                                  ? '${item.year}'
-                                  : (isMovie ? 'Movie' : 'Series'),
+                              isSeries ? 'Series' : 'Movie',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.white.withValues(alpha: 0.5),

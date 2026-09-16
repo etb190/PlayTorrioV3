@@ -607,6 +607,7 @@ class _GlassAppBar extends StatelessWidget {
                 if (!aiQuizEnabled) return const SizedBox.shrink();
                 final palette = AppThemeService.currentPalette.value;
                 return IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: Icon(
                     Icons.auto_awesome_rounded,
                     color: palette.primaryColor,
@@ -628,6 +629,7 @@ class _GlassAppBar extends StatelessWidget {
               builder: (context, calEnabled, _) {
                 if (!calEnabled) return const SizedBox.shrink();
                 return IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: Icon(
                     Icons.calendar_month_rounded,
                     color: Colors.white.withValues(alpha: 0.75),
@@ -645,6 +647,7 @@ class _GlassAppBar extends StatelessWidget {
             ),
             // Discover Catalogs
             IconButton(
+              mouseCursor: SystemMouseCursors.click,
               icon: Icon(
                 Icons.explore_rounded,
                 color: Colors.white.withValues(alpha: 0.75),
@@ -662,11 +665,13 @@ class _GlassAppBar extends StatelessWidget {
             Builder(
               builder: (context) {
                 return IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: Icon(
                     Icons.search_rounded,
                     color: Colors.white.withValues(alpha: 0.65),
                     size: 25,
                   ),
+                  tooltip: 'Search',
                   onPressed: () {
                     final box = context.findRenderObject() as RenderBox?;
                     final offset = box?.localToGlobal(box.size.center(Offset.zero));
@@ -679,6 +684,7 @@ class _GlassAppBar extends StatelessWidget {
             Builder(
               builder: (context) {
                 return IconButton(
+                  mouseCursor: SystemMouseCursors.click,
                   icon: Icon(
                     Icons.settings_rounded,
                     color: Colors.white.withValues(alpha: 0.65),
@@ -699,6 +705,7 @@ class _GlassAppBar extends StatelessWidget {
                 valueListenable: WindowService.instance.isFullscreenNotifier,
                 builder: (context, isFullscreen, _) {
                   return IconButton(
+                    mouseCursor: SystemMouseCursors.click,
                     icon: Icon(
                       isFullscreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
                       color: isFullscreen
