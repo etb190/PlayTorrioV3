@@ -74,6 +74,7 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
     final pct = (effectiveVol * 100).round();
 
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: Row(
@@ -94,7 +95,9 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
             const SizedBox(width: 4),
 
             // Volume Slider Track
-            GestureDetector(
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onHorizontalDragUpdate: (e) => _updateFromPosition(e.localPosition.dx),
               onTapDown: (e) => _updateFromPosition(e.localPosition.dx),
@@ -171,6 +174,7 @@ class _PlayerVolumeControlState extends State<PlayerVolumeControl> {
                 ),
               ),
             ),
+          ),
 
             // Percentage Readout
             if (isBoosting || _isHovered) ...[

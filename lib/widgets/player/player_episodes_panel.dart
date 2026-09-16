@@ -807,6 +807,7 @@ class _PlayerEpisodesPanelState extends State<PlayerEpisodesPanel> {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
+                      mouseCursor: SystemMouseCursors.click,
                       onTap: () => widget.onEpisodeSelected(video),
                       borderRadius: BorderRadius.circular(10),
                       child: Container(

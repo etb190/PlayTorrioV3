@@ -46,6 +46,21 @@ class _PlayerSourcesPanelState extends State<PlayerSourcesPanel> {
   bool _isLoading = false;
   StreamSubscription<StreamSource>? _streamSub;
   int? _hoveredIndex;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  List<StreamSource> get _filteredSources {
+    if (_searchQuery.trim().isEmpty) return _sources;
+    final q = _searchQuery.trim().toLowerCase();
+    return _sources.where((s) {
+      final nameMatch = s.name != null && s.name!.toLowerCase().contains(q);
+      final descMatch = s.description != null && s.description!.toLowerCase().contains(q);
+      final titleMatch = s.title != null && s.title!.toLowerCase().contains(q);
+      final addonMatch = s.addonName.toLowerCase().contains(q);
+      final qualityMatch = s.quality != null && s.quality!.toLowerCase().contains(q);
+      return nameMatch || descMatch || titleMatch || addonMatch || qualityMatch;
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -225,6 +240,7 @@ class _PlayerSourcesPanelState extends State<PlayerSourcesPanel> {
   @override
   void dispose() {
     _streamSub?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -268,6 +284,10 @@ class _PlayerSourcesPanelState extends State<PlayerSourcesPanel> {
                   _buildErrorBanner(widget.errorMessage!, isCompact),
 
                 const Divider(height: 1, color: Color(0x1AFFFFFF)),
+
+                // ── Search Bar ──
+                if (_sources.isNotEmpty || _searchQuery.isNotEmpty)
+                  _buildSearchBar(isCompact),
 
                 // ── Sources List / Loading / Empty State ──
                 Expanded(
@@ -482,17 +502,115 @@ class _PlayerSourcesPanelState extends State<PlayerSourcesPanel> {
     );
   }
 
+  Widget _buildSearchBar(bool isCompact) {
+    return Container(
+      height: 38,
+      margin: EdgeInsets.symmetric(
+        horizontal: isCompact ? 12 : 16,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0x331E2435),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _searchQuery.isNotEmpty
+              ? PlayerTheme.accent.withValues(alpha: 0.6)
+              : Colors.white.withValues(alpha: 0.10),
+        ),
+      ),
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        cursorColor: PlayerTheme.accent,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          border: InputBorder.none,
+          hintText: 'Search sources (e.g. 1080p, 4k, Torrentio)...',
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.40), fontSize: 12.5),
+          prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 18),
+          prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    child: const Icon(Icons.close_rounded, color: Colors.white60, size: 16),
+                  ),
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        onChanged: (val) {
+          setState(() {
+            _searchQuery = val;
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildSourcesList(bool isCompact) {
+    final sources = _filteredSources;
+    if (sources.isEmpty && _searchQuery.isNotEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off_rounded, color: Colors.white.withValues(alpha: 0.30), size: 44),
+              const SizedBox(height: 12),
+              Text(
+                'No sources found matching "$_searchQuery"',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 14),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: PlayerTheme.accent.withValues(alpha: 0.20),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: PlayerTheme.accent.withValues(alpha: 0.50)),
+                    ),
+                    child: const Text(
+                      'Clear Search',
+                      style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return ListView.separated(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(
         horizontal: isCompact ? 12 : 16,
-        vertical: 14,
+        vertical: 10,
       ),
-      itemCount: _sources.length + (_isLoading ? 1 : 0),
+      itemCount: sources.length + (_isLoading ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        if (index == _sources.length && _isLoading) {
+        if (index == sources.length && _isLoading) {
           return Container(
             padding: const EdgeInsets.all(12),
             alignment: Alignment.center,
@@ -520,7 +638,7 @@ class _PlayerSourcesPanelState extends State<PlayerSourcesPanel> {
           );
         }
 
-        final source = _sources[index];
+        final source = sources[index];
         final isHovered = _hoveredIndex == index;
 
         return _buildSourceCard(source, index, isHovered, isCompact);

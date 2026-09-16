@@ -834,6 +834,7 @@ class _IptvPlayerPageState extends State<IptvPlayerPage>
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
+                                          mouseCursor: SystemMouseCursors.click,
                                           icon: Icon(
                                             _isMuted || _volume == 0
                                                 ? Icons.volume_off_rounded
@@ -846,33 +847,36 @@ class _IptvPlayerPageState extends State<IptvPlayerPage>
                                         ),
                                         SizedBox(
                                           width: 86,
-                                          child: SliderTheme(
-                                            data: SliderTheme.of(context).copyWith(
-                                              trackHeight: 3.5,
-                                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.5),
-                                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                                              activeTrackColor: const Color(0xFF7C5CFF),
-                                              inactiveTrackColor: Colors.white24,
-                                              thumbColor: Colors.white,
-                                            ),
-                                            child: Slider(
-                                              value: _isMuted ? 0.0 : _volume,
-                                              min: 0.0,
-                                              max: 1.0,
-                                              onChanged: (val) {
-                                                setState(() {
-                                                  _volume = val;
-                                                  _isMuted = val == 0.0;
-                                                  _player.setVolume(_isMuted ? 0.0 : val * 100.0);
-                                                  _showVolumeHud = true;
-                                                });
-                                                _volumeHudTimer?.cancel();
-                                                _volumeHudTimer = Timer(const Duration(milliseconds: 1600), () {
-                                                  if (mounted) setState(() => _showVolumeHud = false);
-                                                });
-                                                _hideControlsTimer?.cancel();
-                                              },
-                                              onChangeEnd: (_) => _startHideControlsTimer(),
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: SliderTheme(
+                                              data: SliderTheme.of(context).copyWith(
+                                                trackHeight: 3.5,
+                                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.5),
+                                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                                                activeTrackColor: const Color(0xFF7C5CFF),
+                                                inactiveTrackColor: Colors.white24,
+                                                thumbColor: Colors.white,
+                                              ),
+                                              child: Slider(
+                                                value: _isMuted ? 0.0 : _volume,
+                                                min: 0.0,
+                                                max: 1.0,
+                                                onChanged: (val) {
+                                                  setState(() {
+                                                    _volume = val;
+                                                    _isMuted = val == 0.0;
+                                                    _player.setVolume(_isMuted ? 0.0 : val * 100.0);
+                                                    _showVolumeHud = true;
+                                                  });
+                                                  _volumeHudTimer?.cancel();
+                                                  _volumeHudTimer = Timer(const Duration(milliseconds: 1600), () {
+                                                    if (mounted) setState(() => _showVolumeHud = false);
+                                                  });
+                                                  _hideControlsTimer?.cancel();
+                                                },
+                                                onChangeEnd: (_) => _startHideControlsTimer(),
+                                              ),
                                             ),
                                           ),
                                         ),

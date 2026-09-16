@@ -3137,6 +3137,7 @@ class _SourceCardState extends State<_SourceCard> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
+            mouseCursor: SystemMouseCursors.click,
             borderRadius: BorderRadius.circular(12),
             onTap: () {
               HapticFeedback.lightImpact();
@@ -3515,6 +3516,7 @@ class _CopyMagnetButtonState extends State<_CopyMagnetButton> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: Tooltip(
@@ -3522,6 +3524,7 @@ class _CopyMagnetButtonState extends State<_CopyMagnetButton> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
+            mouseCursor: SystemMouseCursors.click,
             onTap: _copy,
             borderRadius: BorderRadius.circular(18),
             child: AnimatedContainer(

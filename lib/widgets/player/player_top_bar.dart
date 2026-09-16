@@ -170,6 +170,7 @@ class PlayerTopBar extends StatelessWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
+                    mouseCursor: SystemMouseCursors.click,
                     onTap: onToggleEpisodes,
                     borderRadius: BorderRadius.circular(12),
                     child: AnimatedContainer(
