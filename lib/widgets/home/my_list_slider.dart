@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/movie/movie.dart';
 import '../../models/my_list/my_list_item.dart';
 import '../../pages/details/details_page.dart';
+import '../../services/continue_watching/continue_watching_service.dart';
 import '../../services/my_list/my_list_service.dart';
 import '../../services/theme/app_theme_service.dart';
 import '../../utils/navigation/route_transitions.dart';
@@ -283,8 +284,14 @@ class _MyListHomeCardState extends State<_MyListHomeCard> {
     final imageUrl = item.poster;
     final isMovie = item.type == 'movie';
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
+    return ValueListenableBuilder<List<ContinueWatchingItem>>(
+      valueListenable: ContinueWatchingService.activeItems,
+      builder: (context, _, __) {
+        final lastWatched = MyListService.getLastWatchedEpisode(item);
+        final isSeries = !isMovie;
+
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
@@ -492,18 +499,53 @@ class _MyListHomeCardState extends State<_MyListHomeCard> {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
-                          if (item.year != null)
+                          if (isSeries && lastWatched != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                lastWatched.label,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF00E5FF),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                            if (item.year != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                '${item.year}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ] else ...[
                             Text(
-                              '${item.year}',
+                              item.year != null
+                                  ? '${item.year}'
+                                  : (isMovie ? 'Movie' : 'Series'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.white.withValues(alpha: 0.5),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                          ],
                           if (item.source == MyListSource.trakt) ...[
                             const SizedBox(width: 6),
                             Container(
@@ -535,6 +577,8 @@ class _MyListHomeCardState extends State<_MyListHomeCard> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 

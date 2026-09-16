@@ -1019,13 +1019,27 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (mediaId != null && mediaId.isNotEmpty && ep != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        if (ep.season != null) {
-          await prefs.setInt('last_watched_season_$mediaId', ep.season!);
+        final showName = widget.detail?.name ?? _detail?.name ?? widget.title;
+        final cleanTitle = showName.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
+        final detailImdb = widget.detail?.imdbId ?? (mediaId.startsWith('tt') ? mediaId : null);
+        final detailTmdb = widget.detail?.tmdbId;
+
+        final targetKeys = <String>{
+          mediaId,
+          if (detailImdb != null && detailImdb.isNotEmpty) detailImdb,
+          if (detailTmdb != null) ...['tmdb:$detailTmdb', '$detailTmdb'],
+          if (cleanTitle.isNotEmpty) cleanTitle,
+        };
+
+        for (final k in targetKeys) {
+          if (ep.season != null) {
+            await prefs.setInt('last_watched_season_$k', ep.season!);
+          }
+          if (ep.episode != null) {
+            await prefs.setInt('last_watched_episode_$k', ep.episode!);
+          }
+          await prefs.setString('last_watched_episode_id_$k', ep.id);
         }
-        if (ep.episode != null) {
-          await prefs.setInt('last_watched_episode_$mediaId', ep.episode!);
-        }
-        await prefs.setString('last_watched_episode_id_$mediaId', ep.id);
       } catch (e) {
         debugPrint('[PlayerScreen] Error saving last watched episode: $e');
       }

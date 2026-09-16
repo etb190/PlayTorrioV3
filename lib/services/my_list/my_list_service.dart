@@ -2,8 +2,23 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/my_list/my_list_item.dart';
+import '../continue_watching/continue_watching_service.dart';
 import '../trakt/trakt_service.dart';
 import '../simkl/simkl_service.dart';
+
+class LastWatchedEpisode {
+  final int season;
+  final int episode;
+  final String? episodeTitle;
+
+  const LastWatchedEpisode({
+    required this.season,
+    required this.episode,
+    this.episodeTitle,
+  });
+
+  String get label => 'S${season.toString().padLeft(2, '0')}:E${episode.toString().padLeft(2, '0')}';
+}
 
 abstract final class MyListService {
   static const _storageKey = 'my_list_v1';
@@ -11,9 +26,11 @@ abstract final class MyListService {
 
   static final ValueNotifier<List<MyListItem>> items = ValueNotifier<List<MyListItem>>([]);
   static final ValueNotifier<bool> isSyncing = ValueNotifier<bool>(false);
+  static SharedPreferences? _prefs;
 
   static Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
+    _prefs = prefs;
     final stored = prefs.getString(_storageKey);
     if (stored != null) {
       try {
@@ -191,5 +208,61 @@ abstract final class MyListService {
     } else {
       add(item);
     }
+  }
+
+  /// Retrieves the last watched season and episode for a TV show item in My List.
+  static LastWatchedEpisode? getLastWatchedEpisode(MyListItem item) {
+    if (item.type != 'series' && item.type != 'anime' && item.type != 'tv') {
+      return null;
+    }
+
+    final cleanItemTitle = item.title.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
+
+    // 1. Check in-memory active Continue Watching sessions
+    for (final cw in ContinueWatchingService.activeItems.value) {
+      if (cw.type == 'movie') continue;
+      final cleanCwTitle = cw.title.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
+
+      final matchesId = (item.imdbId != null && item.imdbId!.isNotEmpty && cw.id == item.imdbId) ||
+          (item.tmdbId != null && (cw.id == 'tmdb:${item.tmdbId}' || cw.id == '${item.tmdbId}')) ||
+          (item.traktId != null && cw.id == '${item.traktId}') ||
+          (item.simklId != null && cw.id == '${item.simklId}');
+
+      final matchesTitle = cleanItemTitle.isNotEmpty && cleanCwTitle.isNotEmpty && cleanItemTitle == cleanCwTitle;
+
+      if ((matchesId || matchesTitle) && cw.season != null && cw.episode != null) {
+        return LastWatchedEpisode(
+          season: cw.season!,
+          episode: cw.episode!,
+          episodeTitle: cw.episodeTitle,
+        );
+      }
+    }
+
+    // 2. Fall back to persisted SharedPreferences keys
+    if (_prefs == null) {
+      SharedPreferences.getInstance().then((p) => _prefs = p);
+    }
+
+    if (_prefs != null) {
+      final candidateKeys = <String>{
+        if (item.imdbId != null && item.imdbId!.isNotEmpty) item.imdbId!,
+        if (item.tmdbId != null) ...['tmdb:${item.tmdbId}', '${item.tmdbId}'],
+        if (item.traktId != null) '${item.traktId}',
+        if (item.simklId != null) '${item.simklId}',
+        if (cleanItemTitle.isNotEmpty) cleanItemTitle,
+      };
+
+      for (final key in candidateKeys) {
+        final s = _prefs!.getInt('last_watched_season_$key');
+        final e = _prefs!.getInt('last_watched_episode_$key');
+        if (s != null && e != null) {
+          final epId = _prefs!.getString('last_watched_episode_id_$key');
+          return LastWatchedEpisode(season: s, episode: e, episodeTitle: epId);
+        }
+      }
+    }
+
+    return null;
   }
 }

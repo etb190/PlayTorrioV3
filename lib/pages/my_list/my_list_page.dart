@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/my_list/my_list_item.dart';
+import '../../services/continue_watching/continue_watching_service.dart';
 import '../../services/my_list/my_list_service.dart';
 import '../../utils/navigation/route_transitions.dart';
 import '../details/details_page.dart';
@@ -354,34 +355,10 @@ class _MyListPageState extends State<MyListPage> {
                 _buildFilterPill('movie', 'Movies', movieCount),
                 const SizedBox(width: 8),
                 _buildFilterPill('series', 'TV Shows', seriesCount),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
 
-                // Sort Dropdown
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _sortBy,
-                        dropdownColor: const Color(0xFF151822),
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                        icon: const Icon(Icons.sort_rounded, color: Color(0xFF7C5CFF), size: 16),
-                        items: const [
-                          DropdownMenuItem(value: 'recent', child: Text('Recently Added')),
-                          DropdownMenuItem(value: 'title', child: Text('Alphabetical')),
-                          DropdownMenuItem(value: 'year', child: Text('Release Year')),
-                        ],
-                        onChanged: (v) => setState(() => _sortBy = v!),
-                      ),
-                    ),
-                  ),
-                ),
+                // Sorter matching exact size and style of filter pills
+                _buildSortPill(),
               ],
             ),
           ),
@@ -478,8 +455,109 @@ class _MyListPageState extends State<MyListPage> {
           ],
         ),
       ),
+    ),
+  );
+}
+
+  Widget _buildSortPill() {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        hoverColor: Colors.white.withValues(alpha: 0.08),
+      ),
+      child: PopupMenuButton<String>(
+        tooltip: 'Sort list',
+        color: const Color(0xFF151822),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        offset: const Offset(0, 38),
+        elevation: 10,
+        onSelected: (v) => setState(() => _sortBy = v),
+        itemBuilder: (context) => [
+          _buildSortMenuItem('recent', 'Recently Added', Icons.access_time_rounded),
+          _buildSortMenuItem('title', 'Alphabetical', Icons.sort_by_alpha_rounded),
+          _buildSortMenuItem('year', 'Release Year', Icons.calendar_today_rounded),
+        ],
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.sort_rounded, color: Color(0xFF7C5CFF), size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  _getSortLabel(_sortBy),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
+  }
+
+  PopupMenuItem<String> _buildSortMenuItem(String value, String label, IconData icon) {
+    final isSelected = _sortBy == value;
+    return PopupMenuItem<String>(
+      value: value,
+      mouseCursor: SystemMouseCursors.click,
+      height: 38,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: isSelected ? const Color(0xFF7C5CFF) : Colors.white54,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ),
+          if (isSelected)
+            const Icon(Icons.check_rounded, color: Color(0xFF7C5CFF), size: 15),
+        ],
+      ),
+    );
+  }
+
+  String _getSortLabel(String sortBy) {
+    switch (sortBy) {
+      case 'title':
+        return 'Alphabetical';
+      case 'year':
+        return 'Release Year';
+      case 'recent':
+      default:
+        return 'Recently Added';
+    }
   }
 
   Widget _buildEmptyState(bool isListEmpty) {
@@ -565,8 +643,14 @@ class _MyListCardState extends State<_MyListCard> {
     final item = widget.item;
     final isMovie = item.type == 'movie';
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
+    return ValueListenableBuilder<List<ContinueWatchingItem>>(
+      valueListenable: ContinueWatchingService.activeItems,
+      builder: (context, _, __) {
+        final lastWatched = MyListService.getLastWatchedEpisode(item);
+        final isSeries = !isMovie;
+
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
@@ -708,15 +792,55 @@ class _MyListCardState extends State<_MyListCard> {
                             letterSpacing: -0.2,
                           ),
                         ),
-                        if (item.year != null)
-                          Text(
-                            '${item.year}',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            if (isSeries && lastWatched != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  lastWatched.label,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF00E5FF),
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                              if (item.year != null) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${item.year}',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ] else ...[
+                              Text(
+                                item.year != null
+                                    ? '${item.year}'
+                                    : (isMovie ? 'Movie' : 'Series'),
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -769,6 +893,8 @@ class _MyListCardState extends State<_MyListCard> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 
