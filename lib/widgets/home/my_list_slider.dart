@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/continue_watching/continue_watching_item.dart';
 import '../../models/movie/movie.dart';
 import '../../models/my_list/my_list_item.dart';
 import '../../pages/details/details_page.dart';

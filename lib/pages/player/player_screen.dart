@@ -1021,13 +1021,13 @@ class _PlayerScreenState extends State<PlayerScreen>
         final prefs = await SharedPreferences.getInstance();
         final showName = widget.detail?.name ?? _detail?.name ?? widget.title;
         final cleanTitle = showName.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').trim();
-        final detailImdb = widget.detail?.imdbId ?? (mediaId.startsWith('tt') ? mediaId : null);
-        final detailTmdb = widget.detail?.tmdbId;
+        final detailImdb = mediaId.startsWith('tt') ? mediaId : null;
+        final detailTmdb = widget.detail?.tmdbId ?? _detail?.tmdbId;
 
         final targetKeys = <String>{
           mediaId,
           if (detailImdb != null && detailImdb.isNotEmpty) detailImdb,
-          if (detailTmdb != null) ...['tmdb:$detailTmdb', '$detailTmdb'],
+          if (detailTmdb != null && detailTmdb.isNotEmpty) ...['tmdb:$detailTmdb', detailTmdb],
           if (cleanTitle.isNotEmpty) cleanTitle,
         };
 
